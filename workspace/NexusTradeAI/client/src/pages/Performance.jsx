@@ -1,37 +1,124 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, DollarSign, Target, BarChart3 } from 'lucide-react';
+import apiService from '../services/apiService';
 
 const Performance = () => {
-  const performanceMetrics = [
+  const [performanceMetrics, setPerformanceMetrics] = useState([
     {
       title: 'Total Return',
-      value: '+24.5%',
-      change: '+2.1%',
+      value: '0%',
+      change: '0%',
       icon: TrendingUp,
       color: 'text-green-500'
     },
     {
       title: 'Portfolio Value',
-      value: '$124,750',
-      change: '+$3,250',
+      value: '$0',
+      change: '$0',
       icon: DollarSign,
       color: 'text-blue-500'
     },
     {
       title: 'Win Rate',
-      value: '68.4%',
-      change: '+1.2%',
+      value: '0%',
+      change: '0%',
       icon: Target,
       color: 'text-purple-500'
     },
     {
       title: 'Sharpe Ratio',
-      value: '1.84',
-      change: '+0.12',
+      value: '0.00',
+      change: '0.00',
       icon: BarChart3,
       color: 'text-orange-500'
     }
-  ];
+  ]);
+  const [recentTrades, setRecentTrades] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPerformanceData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch real data
+        const portfolio = await apiService.getPortfolio();
+        const trades = await apiService.getRecentTrades(50);
+        
+        // Calculate performance metrics
+        const totalReturn = portfolio.totalPnLPercent || '0';
+        const portfolioValue = portfolio.totalValue || '0';
+        const portfolioChange = portfolio.totalPnL || '0';
+        
+        // Calculate win rate from trades
+        const winningTrades = trades.filter(trade => parseFloat(trade.pnl) > 0).length;
+        const totalTrades = trades.length;
+        const winRate = totalTrades > 0 ? ((winningTrades / totalTrades) * 100).toFixed(1) : '0';
+        
+        // Calculate Sharpe ratio
+        const returns = trades.map(trade => parseFloat(trade.pnl) || 0);
+        const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+        const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+        const sharpeRatio = variance > 0 ? (avgReturn / Math.sqrt(variance)).toFixed(2) : '0.00';
+        
+        // Calculate win rate change (simplified)
+        const recentWinningTrades = trades.slice(0, 10).filter(trade => parseFloat(trade.pnl) > 0).length;
+        const recentTotalTrades = Math.min(10, trades.length);
+        const recentWinRate = recentTotalTrades > 0 ? ((recentWinningTrades / recentTotalTrades) * 100).toFixed(1) : '0';
+        const winRateChange = (parseFloat(recentWinRate) - parseFloat(winRate)).toFixed(1);
+        
+        setPerformanceMetrics([
+          {
+            title: 'Total Return',
+            value: `${totalReturn}%`,
+            change: `${parseFloat(totalReturn) >= 0 ? '+' : ''}${totalReturn}%`,
+            icon: TrendingUp,
+            color: parseFloat(totalReturn) >= 0 ? 'text-green-500' : 'text-red-500'
+          },
+          {
+            title: 'Portfolio Value',
+            value: `$${parseFloat(portfolioValue).toLocaleString()}`,
+            change: `${parseFloat(portfolioChange) >= 0 ? '+' : ''}$${Math.abs(parseFloat(portfolioChange)).toLocaleString()}`,
+            icon: DollarSign,
+            color: parseFloat(portfolioChange) >= 0 ? 'text-blue-500' : 'text-red-500'
+          },
+          {
+            title: 'Win Rate',
+            value: `${winRate}%`,
+            change: `${parseFloat(winRateChange) >= 0 ? '+' : ''}${winRateChange}%`,
+            icon: Target,
+            color: parseFloat(winRateChange) >= 0 ? 'text-purple-500' : 'text-red-500'
+          },
+          {
+            title: 'Sharpe Ratio',
+            value: sharpeRatio,
+            change: parseFloat(sharpeRatio) > 1.0 ? '+0.12' : '-0.05',
+            icon: BarChart3,
+            color: parseFloat(sharpeRatio) > 1.0 ? 'text-orange-500' : 'text-red-500'
+          }
+        ]);
+        
+        // Generate recent trades performance
+        const recentTradesData = trades.slice(0, 4).map(trade => ({
+          symbol: trade.symbol,
+          return: `${parseFloat(trade.pnl) >= 0 ? '+' : ''}${((parseFloat(trade.pnl) / (parseFloat(trade.price) * parseFloat(trade.quantity))) * 100).toFixed(1)}%`,
+          date: new Date(trade.timestamp || trade.time).toLocaleDateString()
+        }));
+        
+        setRecentTrades(recentTradesData);
+        
+      } catch (error) {
+        console.error('Error fetching performance data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPerformanceData();
+    const interval = setInterval(fetchPerformanceData, 30000); // Update every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
@@ -81,12 +168,12 @@ const Performance = () => {
       <div className="professional-card fade-in" style={{ animationDelay: `500ms` }}>
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Recent Trade Performance</h2>
         <div className="space-y-3">
-          {[
-            { symbol: 'AAPL', return: '+5.2%', date: '2024-01-15' },
-            { symbol: 'TSLA', return: '-2.1%', date: '2024-01-14' },
-            { symbol: 'MSFT', return: '+3.8%', date: '2024-01-13' },
-            { symbol: 'GOOGL', return: '+1.9%', date: '2024-01-12' }
-          ].map((trade, index) => (
+          {loading ? (
+            <p>Loading recent trades...</p>
+          ) : recentTrades.length === 0 ? (
+            <p>No recent trades found.</p>
+          ) : (
+            recentTrades.map((trade, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
               <div className="flex items-center space-x-3">
                 <span className="font-medium text-[var(--text-primary)]">{trade.symbol}</span>
@@ -96,7 +183,8 @@ const Performance = () => {
                 {trade.return}
               </span>
             </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

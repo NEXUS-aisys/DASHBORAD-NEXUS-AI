@@ -23,6 +23,7 @@ import Backtesting from './pages/Backtesting';
 import Settings from './pages/Settings';
 import TradeSignals from './pages/TradeSignals';
 import DataMonitor from './pages/DataMonitor';
+import Analysis from './pages/Analysis';
 // ML Models
 import MLModels from './pages/MLModels';
 import authService from './services/authService';
@@ -126,6 +127,7 @@ function App() {
                   {/* ML Models Route */}
                   <Route path="ml-models" element={<MLModels />} />
                   <Route path="data-monitor" element={<DataMonitor />} />
+                  <Route path="analysis" element={<Analysis />} />
                   <Route path="journal" element={<TradingJournal />} />
                   <Route path="backtesting" element={<Backtesting />} />
                   <Route path="settings" element={<Settings />} />

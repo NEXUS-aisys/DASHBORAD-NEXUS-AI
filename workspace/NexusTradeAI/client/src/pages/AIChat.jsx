@@ -9,8 +9,8 @@ import {
     Tooltip,
 } from 'chart.js';
 import {
-    Mic,
-    MicOff,
+  Mic,
+  MicOff,
     Send,
     Settings
 } from 'lucide-react';

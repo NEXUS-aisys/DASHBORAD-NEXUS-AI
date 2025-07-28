@@ -6,7 +6,7 @@ class YahooFinanceProvider {
     this.displayName = 'Yahoo Finance';
     this.type = 'core'; // Core provider - always available
     this.baseUrl = 'https://query1.finance.yahoo.com/v1/finance';
-    this.rateLimitMs = 1000; // 1 request per second
+    this.rateLimitMs = 2000; // 1 request per 2 seconds - more conservative
     this.lastRequestTime = 0;
   }
 
@@ -70,7 +70,8 @@ class YahooFinanceProvider {
     try {
       await this.enforceRateLimit();
       
-      const quoteUrl = `${this.baseUrl}/quote`;
+      // Use the correct Yahoo Finance API endpoint
+      const quoteUrl = 'https://query1.finance.yahoo.com/v7/finance/quote';
       const response = await axios.get(quoteUrl, {
         params: {
           symbols: symbol,
@@ -82,7 +83,7 @@ class YahooFinanceProvider {
         timeout: 10000
       });
 
-      const quote = response.data?.quoteSummary?.result?.[0]?.price || response.data?.quoteResponse?.result?.[0];
+      const quote = response.data?.quoteResponse?.result?.[0];
       
       if (!quote) {
         throw new Error(`No data found for symbol: ${symbol}`);
@@ -92,12 +93,12 @@ class YahooFinanceProvider {
         symbol: symbol,
         provider: this.name,
         timestamp: new Date().toISOString(),
-        price: quote.regularMarketPrice?.raw || quote.regularMarketPrice,
-        change: quote.regularMarketChange?.raw || quote.regularMarketChange,
-        changePercent: quote.regularMarketChangePercent?.raw || quote.regularMarketChangePercent,
-        volume: quote.regularMarketVolume?.raw || quote.regularMarketVolume,
-        dayHigh: quote.regularMarketDayHigh?.raw || quote.regularMarketDayHigh,
-        dayLow: quote.regularMarketDayLow?.raw || quote.regularMarketDayLow,
+        price: quote.regularMarketPrice,
+        change: quote.regularMarketChange,
+        changePercent: quote.regularMarketChangePercent,
+        volume: quote.regularMarketVolume,
+        dayHigh: quote.regularMarketDayHigh,
+        dayLow: quote.regularMarketDayLow,
         open: quote.regularMarketOpen?.raw || quote.regularMarketOpen,
         previousClose: quote.regularMarketPreviousClose?.raw || quote.regularMarketPreviousClose,
         marketTime: quote.regularMarketTime?.raw ? new Date(quote.regularMarketTime.raw * 1000).toISOString() : new Date().toISOString()

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -73,27 +73,84 @@ const DailyPnLKPI = ({ className = '' }) => {
 
 const Dashboard = () => {
   const [chartTimeframe, setChartTimeframe] = useState('1D');
+  const [kpiData, setKpiData] = useState({
+    winRate: '0%',
+    sharpeRatio: '0.00',
+    maxDrawdown: '0%'
+  });
 
-  // Static KPI data for display
-  const staticKPIs = [
+  // Fetch KPI data from API
+  useEffect(() => {
+    const fetchKPIData = async () => {
+      try {
+        // Fetch portfolio data to calculate KPIs
+        const portfolio = await apiService.getPortfolio();
+        const trades = await apiService.getRecentTrades(100);
+        
+        // Calculate win rate from recent trades
+        const winningTrades = trades.filter(trade => trade.pnl > 0).length;
+        const totalTrades = trades.length;
+        const winRate = totalTrades > 0 ? ((winningTrades / totalTrades) * 100).toFixed(1) : '0';
+        
+        // Calculate Sharpe ratio (simplified)
+        const returns = trades.map(trade => parseFloat(trade.pnl) || 0);
+        const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+        const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+        const sharpeRatio = variance > 0 ? (avgReturn / Math.sqrt(variance)).toFixed(2) : '0.00';
+        
+        // Calculate max drawdown (simplified)
+        let maxDrawdown = 0;
+        let peak = 0;
+        let runningTotal = 0;
+        
+        trades.forEach(trade => {
+          runningTotal += parseFloat(trade.pnl) || 0;
+          if (runningTotal > peak) {
+            peak = runningTotal;
+          }
+          const drawdown = (peak - runningTotal) / peak * 100;
+          if (drawdown > maxDrawdown) {
+            maxDrawdown = drawdown;
+          }
+        });
+        
+        setKpiData({
+          winRate: `${winRate}%`,
+          sharpeRatio: sharpeRatio,
+          maxDrawdown: `-${maxDrawdown.toFixed(1)}%`
+        });
+      } catch (error) {
+        console.error('Error fetching KPI data:', error);
+        // Keep default values if API fails
+      }
+    };
+
+    fetchKPIData();
+    const interval = setInterval(fetchKPIData, 30000); // Update every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Dynamic KPI data based on real API data
+  const dynamicKPIs = [
     {
       title: 'Win Rate',
-      value: '68.4%',
-      change: '+1.2%',
+      value: kpiData.winRate,
+      change: '+1.2%', // This could be calculated from historical data
       trend: 'up',
       icon: Target
     },
     {
       title: 'Sharpe Ratio',
-      value: '1.84',
-      change: '+0.12',
+      value: kpiData.sharpeRatio,
+      change: '+0.12', // This could be calculated from historical data
       trend: 'up',
       icon: BarChart3
     },
     {
       title: 'Max Drawdown',
-      value: '-4.2%',
-      change: '+0.8%',
+      value: kpiData.maxDrawdown,
+      change: '+0.8%', // This could be calculated from historical data
       trend: 'up',
       icon: TrendingDown
     }
@@ -145,7 +202,7 @@ const Dashboard = () => {
         />
 
         {/* Static KPIs */}
-        {staticKPIs.map((kpi, index) => {
+        {dynamicKPIs.map((kpi, index) => {
           const Icon = kpi.icon;
           const isPositive = kpi.trend === 'up';
           

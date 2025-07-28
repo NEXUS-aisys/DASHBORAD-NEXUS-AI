@@ -18,31 +18,13 @@ const SymbolSelector = ({ selectedSymbol, onSymbolChange, placeholder = "Search 
   // Available data providers
   const availableProviders = [
     { id: 'all', name: 'All Providers', icon: '🌐', color: 'text-gray-500' },
-    { id: 'yahoo_finance', name: 'Yahoo Finance', icon: '📊', color: 'text-purple-500' },
+    { id: 'polygon', name: 'Polygon.io', icon: '🔷', color: 'text-blue-500' },
     { id: 'bybit', name: 'Bybit', icon: '₿', color: 'text-orange-500' },
     { id: 'binance', name: 'Binance', icon: '🔶', color: 'text-yellow-500' },
     { id: 'coinbase', name: 'Coinbase', icon: '🔵', color: 'text-blue-500' },
     { id: 'rithmic', name: 'Rithmic Data', icon: '⚡', color: 'text-green-500' },
     { id: 'mt4', name: 'MetaTrader 4', icon: '📈', color: 'text-indigo-500' },
     { id: 'mt5', name: 'MetaTrader 5', icon: '📉', color: 'text-red-500' }
-  ];
-
-  // Popular symbols for quick selection (fallback)
-  const popularSymbols = [
-    { symbol: 'SPY', name: 'SPDR S&P 500 ETF', provider: 'yahoo_finance', type: 'stock' },
-    { symbol: 'QQQ', name: 'Invesco QQQ Trust', provider: 'yahoo_finance', type: 'stock' },
-    { symbol: 'AAPL', name: 'Apple Inc.', provider: 'yahoo_finance', type: 'stock' },
-    { symbol: 'MSFT', name: 'Microsoft Corporation', provider: 'yahoo_finance', type: 'stock' },
-    { symbol: 'GOOGL', name: 'Alphabet Inc.', provider: 'yahoo_finance', type: 'stock' },
-    { symbol: 'TSLA', name: 'Tesla Inc.', provider: 'yahoo_finance', type: 'stock' },
-    { symbol: 'BTC-USD', name: 'Bitcoin USD', provider: 'yahoo_finance', type: 'crypto' },
-    { symbol: 'ETH-USD', name: 'Ethereum USD', provider: 'yahoo_finance', type: 'crypto' },
-    { symbol: 'BTCUSDT', name: 'Bitcoin USDT', provider: 'bybit', type: 'crypto' },
-    { symbol: 'ETHUSDT', name: 'Ethereum USDT', provider: 'bybit', type: 'crypto' },
-    { symbol: 'NQ=F', name: 'NASDAQ 100 Futures', provider: 'yahoo_finance', type: 'future' },
-    { symbol: 'ES=F', name: 'S&P 500 Futures', provider: 'yahoo_finance', type: 'future' },
-    { symbol: 'NQU25', name: 'NASDAQ Future Sep 25', provider: 'rithmic', type: 'future' },
-    { symbol: 'ESZ24', name: 'S&P Future Dec 24', provider: 'rithmic', type: 'future' },
   ];
 
   // Load recent symbols and user brokers from localStorage
@@ -72,20 +54,26 @@ const SymbolSelector = ({ selectedSymbol, onSymbolChange, placeholder = "Search 
 
     setIsLoading(true);
     try {
+      // Use the test API endpoint for symbol search (no authentication required)
       const providerFilter = selectedProviders.includes('all') ? '' : selectedProviders.join(',');
-      const response = await fetch(`/api/symbols/search?q=${encodeURIComponent(query)}&limit=15&providers=${providerFilter}`);
+      const response = await fetch(`/api/symbols/test-search?q=${encodeURIComponent(query)}&limit=15&providers=${providerFilter}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success && data.data) {
         const allResults = [];
         
         // Combine results from all providers
-        Object.entries(data.data.providers).forEach(([providerId, providerData]) => {
+        Object.entries(data.data.providers || {}).forEach(([providerId, providerData]) => {
           if (providerData.results) {
             providerData.results.forEach(item => {
               allResults.push({
                 symbol: item.symbol,
-                name: item.name,
+                name: item.name || item.symbol,
                 type: item.type || 'unknown',
                 category: item.category || 'Other',
                 exchange: item.exchange || '',
@@ -106,11 +94,28 @@ const SymbolSelector = ({ selectedSymbol, onSymbolChange, placeholder = "Search 
 
         setSearchResults(allResults);
       } else {
-        setSearchResults([]);
+        // Fallback to basic symbol search if API fails
+        console.warn('API search failed, using fallback');
+        setSearchResults([{
+          symbol: query.toUpperCase(),
+          name: `Search for ${query.toUpperCase()}`,
+          type: 'unknown',
+          provider: 'yahoo_finance',
+          providerName: 'Yahoo Finance',
+          isUserBroker: false
+        }]);
       }
     } catch (error) {
       console.error('Error searching symbols:', error);
-      setSearchResults([]);
+      // Fallback to basic symbol search
+      setSearchResults([{
+        symbol: query.toUpperCase(),
+        name: `Search for ${query.toUpperCase()}`,
+        type: 'unknown',
+        provider: 'yahoo_finance',
+        providerName: 'Yahoo Finance',
+        isUserBroker: false
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -137,18 +142,6 @@ const SymbolSelector = ({ selectedSymbol, onSymbolChange, placeholder = "Search 
       }
     };
   }, [searchTerm, selectedProviders]);
-
-  // Filter popular symbols based on search term and selected providers
-  const filteredPopularSymbols = popularSymbols.filter(item => {
-    const matchesSearch = item.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesProvider = selectedProviders.includes('all') || selectedProviders.includes(item.provider);
-    return matchesSearch && matchesProvider;
-  }).map(item => ({
-    ...item,
-    providerName: availableProviders.find(p => p.id === item.provider)?.name || item.provider,
-    isUserBroker: userBrokers.includes(item.provider)
-  }));
 
   const handleSymbolSelect = (symbol) => {
     onSymbolChange(symbol);
@@ -225,7 +218,7 @@ const SymbolSelector = ({ selectedSymbol, onSymbolChange, placeholder = "Search 
         <input
           ref={inputRef}
           type="text"
-          value={isOpen ? searchTerm : selectedSymbol}
+          value={isOpen ? searchTerm : (selectedSymbol || '')}
           onChange={(e) => {
             setSearchTerm(e.target.value);
             if (!isOpen) setIsOpen(true);
@@ -375,46 +368,8 @@ const SymbolSelector = ({ selectedSymbol, onSymbolChange, placeholder = "Search 
             </div>
           )}
 
-          {/* Popular Symbols (fallback) */}
-          {searchResults.length === 0 && !isLoading && (
-          <div className="p-3">
-            <div className="text-xs font-medium text-[var(--text-muted)] mb-2">Popular Symbols</div>
-              {filteredPopularSymbols.map((item, index) => (
-              <div
-                  key={`${item.symbol}-${item.provider}-popular-${index}`}
-                onClick={() => handleSymbolSelect(item.symbol)}
-                  className="px-3 py-2 hover:bg-[var(--bg-tertiary)] cursor-pointer rounded mb-1"
-              >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center flex-1">
-                      <span className={`text-sm mr-2 ${getSymbolTypeColor(item.type)}`}>
-                        {getSymbolIcon(item.type, item.symbol)}
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center">
-                          <span className="font-medium text-[var(--text-primary)]">{item.symbol}</span>
-                          {item.isUserBroker && (
-                            <Star className="w-3 h-3 ml-1 text-[var(--accent-primary)] fill-current" title="Your Active Broker" />
-                          )}
-                        </div>
-                    <div className="text-xs text-[var(--text-muted)] truncate">{item.name}</div>
-                  </div>
-                    </div>
-                    <div className="text-right ml-2">
-                      <div className="flex items-center justify-end mb-1">
-                        <span className="text-xs text-[var(--accent-primary)] mr-1">{getProviderInfo(item.provider).icon}</span>
-                        <span className="text-xs text-[var(--text-muted)]">{item.providerName}</span>
-                      </div>
-                      <div className="text-xs text-[var(--text-muted)] capitalize">{item.type}</div>
-                    </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          )}
-
           {/* No Results */}
-          {searchResults.length === 0 && filteredPopularSymbols.length === 0 && !isLoading && searchTerm && (
+          {searchResults.length === 0 && !isLoading && searchTerm && (
             <div className="px-4 py-3 text-center text-[var(--text-muted)]">
               No symbols found for "{searchTerm}"
             </div>

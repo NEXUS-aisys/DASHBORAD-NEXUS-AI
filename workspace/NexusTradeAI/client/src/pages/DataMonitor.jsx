@@ -1,436 +1,548 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Activity, TrendingUp, TrendingDown, RefreshCw, X, BarChart3, DollarSign } from 'lucide-react';
-import apiService from '../services/apiService';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  BarChart3, 
+  Plus, 
+  X, 
+  TrendingUp, 
+  TrendingDown, 
+  Zap, 
+  Wifi, 
+  WifiOff,
+  RefreshCw
+} from 'lucide-react';
 import SymbolSelector from '../components/common/SymbolSelector';
+import apiService from '../services/apiService';
 
-const DataMonitor = () => {
-  const [symbolData, setSymbolData] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('connecting');
-  const [expandedSymbol, setExpandedSymbol] = useState(null);
-  const [expandedData, setExpandedData] = useState(null);
-  const expandedRef = useRef(null);
-  const [monitoredSymbols, setMonitoredSymbols] = useState(() => {
-    // Try to load from localStorage first, fallback to default symbols
-    try {
-      const saved = localStorage.getItem('nexus_monitored_symbols');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          console.log('Initializing with saved symbols:', parsed);
-          return parsed;
-        }
-      }
-    } catch (error) {
-      console.error('Error loading initial symbols:', error);
+// Performance-optimized Symbol Card Component
+const SymbolCard = React.memo(({ 
+  symbol, 
+  data, 
+  animationClass, 
+  isLiveMode, 
+  onCardClick, 
+  onRemove 
+}) => {
+  const handleRemove = useCallback((e) => {
+    e.stopPropagation();
+    onRemove(symbol);
+  }, [symbol, onRemove]);
+
+  const handleClick = useCallback(() => {
+    onCardClick(symbol);
+  }, [symbol, onCardClick]);
+
+  // Helper functions for formatting
+  const formatPrice = useCallback((price) => {
+    if (typeof price !== 'number') return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(price);
+  }, []);
+
+  const formatVolume = useCallback((volume) => {
+    if (typeof volume !== 'number') return 'N/A';
+    if (volume >= 1e9) return `${(volume / 1e9).toFixed(2)}B`;
+    if (volume >= 1e6) return `${(volume / 1e6).toFixed(2)}M`;
+    if (volume >= 1e3) return `${(volume / 1e3).toFixed(2)}K`;
+    return volume.toFixed(0);
+  }, []);
+
+  // Memoize expensive calculations
+  const priceDisplay = useMemo(() => {
+    if (data && data.status === 'success' && data.data && data.data.price !== undefined) {
+      return formatPrice(data.data.price);
     }
-    // Default symbols if nothing saved
-    const defaultSymbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'AMD', 'INTC', 'CRM', 'ORCL'];
-    console.log('Initializing with default symbols:', defaultSymbols);
-    return defaultSymbols;
+    return 'Loading...';
+  }, [data, formatPrice]);
+
+  const changeDisplay = useMemo(() => {
+    if (data && data.status === 'success' && data.data) {
+      const change = data.data.change;
+      const changePercent = data.data.changePercent;
+      
+      if (change !== undefined && changePercent !== undefined) {
+        return {
+          change: typeof change === 'number' ? change.toFixed(2) : '0.00',
+          changePercent: typeof changePercent === 'number' ? changePercent.toFixed(2) : '0.00',
+          isPositive: change >= 0
+        };
+      }
+    }
+    return null;
+  }, [data]);
+
+  const volumeDisplay = useMemo(() => {
+    if (data && data.status === 'success' && data.data && data.data.volume !== undefined) {
+      return formatVolume(data.data.volume);
+    }
+    return null;
+  }, [data, formatVolume]);
+
+  return (
+    <div
+      onClick={handleClick}
+      className={`trading-card group relative overflow-hidden rounded-xl border border-[var(--border-primary)] bg-gradient-to-br from-[var(--bg-primary)] to-[var(--bg-secondary)] hover:from-[var(--bg-secondary)] hover:to-[var(--bg-tertiary)] transition-all duration-300 cursor-pointer hover:shadow-lg hover:scale-[1.02] ${animationClass}`}
+    >
+      {/* Elegant Header */}
+      <div className="flex items-center justify-between p-4 pb-2">
+        <div className="flex items-center gap-2">
+          <h3 className="trading-symbol text-lg font-bold text-[var(--text-primary)] tracking-wide">{symbol}</h3>
+          {isLiveMode && (
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-[var(--success)] rounded-full live-pulse"></div>
+              <span className="text-xs text-[var(--text-muted)] font-medium">LIVE</span>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleRemove}
+          className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-[var(--bg-tertiary)] rounded-lg transition-all duration-200 hover:scale-110 performance-button"
+        >
+          <X className="w-4 h-4 text-[var(--text-muted)]" />
+        </button>
+      </div>
+
+      {/* Main Price Display */}
+      <div className="px-4 pb-3">
+        <div className={`trading-price text-2xl font-bold mb-2 transition-colors duration-300 ${animationClass}`}>
+          <span className={data?.status === 'success' ? animationClass : 'text-[var(--text-muted)]'}>
+            {priceDisplay}
+          </span>
+        </div>
+
+        {/* Change Display */}
+        {changeDisplay ? (
+          <div className="flex items-center justify-between">
+            <div className={`flex items-center gap-1 ${changeDisplay.isPositive ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+              {changeDisplay.isPositive ? (
+                <TrendingUp className="w-4 h-4" />
+              ) : (
+                <TrendingDown className="w-4 h-4" />
+              )}
+              <span className="font-semibold">
+                {changeDisplay.isPositive ? '+' : ''}{changeDisplay.change}
+              </span>
+            </div>
+            <div className={`text-sm font-medium ${changeDisplay.isPositive ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+              {changeDisplay.isPositive ? '+' : ''}{changeDisplay.changePercent}%
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-[var(--text-muted)]">
+            {data?.error || data?.message || 'No data available'}
+          </div>
+        )}
+
+        {/* Volume */}
+        {volumeDisplay && (
+          <div className="mt-2 text-xs text-[var(--text-muted)]">
+            Vol: {volumeDisplay}
+          </div>
+        )}
+
+        {/* Data Source Indicator */}
+        {data && data.status === 'success' && data.data && (
+          <div className="mt-2 flex items-center gap-1">
+            <div className={`w-2 h-2 rounded-full ${
+              data.data.isEmergencyFallback ? 'bg-[var(--error)]' :
+              data.data.metadata?.isMockRealTime ? 'bg-[var(--warning)]' :
+              data.provider === 'yahoo_finance' ? 'bg-[var(--success)]' :
+              data.provider === 'polygon' ? 'bg-[var(--info)]' :
+              data.provider === 'bybit' ? 'bg-[var(--accent-primary)]' :
+              'bg-[var(--text-muted)]'
+            }`}></div>
+            <span className="text-xs text-[var(--text-muted)]">
+              {data.data.isEmergencyFallback ? 'Fallback' :
+               data.data.metadata?.isMockRealTime ? 'Simulated' :
+               data.provider === 'yahoo_finance' ? 'Yahoo' :
+               data.provider === 'polygon' ? 'Polygon' :
+               data.provider === 'bybit' ? 'Bybit' :
+               data.provider || 'Unknown'}
+            </span>
+          </div>
+        )}
+
+        {/* Live Indicator */}
+        {isLiveMode && (
+          <div className="mt-2 flex items-center gap-1">
+            <div className="w-2 h-2 bg-[var(--success)] rounded-full live-pulse"></div>
+            <span className="text-xs text-[var(--text-muted)]">Live</span>
+          </div>
+        )}
+      </div>
+
+      {/* Subtle Hover Effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none ultra-smooth"></div>
+    </div>
+  );
+});
+
+SymbolCard.displayName = 'SymbolCard';
+
+// Performance-optimized Data Monitor Component
+const DataMonitor = () => {
+  const navigate = useNavigate();
+  
+  // State management with persistence
+  const [monitoredSymbols, setMonitoredSymbols] = useState(() => {
+    // Load saved symbols from localStorage on component mount
+      const saved = localStorage.getItem('nexus_monitored_symbols');
+    return saved ? JSON.parse(saved) : [];
   });
 
+  const [symbolData, setSymbolData] = useState({});
+  const [isLiveMode, setIsLiveMode] = useState(() => {
+    // Load saved live mode preference
+    const saved = localStorage.getItem('nexus_live_mode');
+    return saved ? JSON.parse(saved) : true;
+  });
 
+  const [updateFrequency, setUpdateFrequency] = useState(() => {
+    // Load saved frequency preference
+    const saved = localStorage.getItem('nexus_update_frequency');
+    return saved ? parseInt(saved) : 3000; // Conservative default to avoid rate limits
+  });
 
-  // Save monitored symbols to localStorage
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [isLoading, setIsLoading] = useState(false);
+  const [priceAnimations, setPriceAnimations] = useState({});
+
+  // Save symbols to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('nexus_monitored_symbols', JSON.stringify(monitoredSymbols));
-    console.log('Saved monitored symbols to localStorage:', monitoredSymbols);
   }, [monitoredSymbols]);
 
-  const fetchSymbolData = async (symbol) => {
-    try {
-      const data = await apiService.getMarketData(symbol);
-      const latestData = data[data.length - 1];
-      if (!latestData) throw new Error('No data returned');
+  // Save live mode preference
+  useEffect(() => {
+    localStorage.setItem('nexus_live_mode', JSON.stringify(isLiveMode));
+  }, [isLiveMode]);
 
-      return {
-        symbol,
-        price: latestData.close,
-        open: latestData.open,
-        high: latestData.high,
-        low: latestData.low,
-        volume: latestData.volume,
-        change: latestData.close - latestData.open,
-        changePercent: ((latestData.close - latestData.open) / latestData.open) * 100,
-        timestamp: new Date(latestData.date).toISOString(),
-        status: 'success',
-        fullData: data
-      };
-    } catch (error) {
-      console.error(`Error fetching data for ${symbol}:`, error);
-      return {
-        symbol, price: 0, status: 'error', error: error.message
-      };
+  // Save frequency preference
+  useEffect(() => {
+    localStorage.setItem('nexus_update_frequency', updateFrequency.toString());
+  }, [updateFrequency]);
+
+  // Notification when symbols are loaded from storage
+  useEffect(() => {
+    const savedSymbols = localStorage.getItem('nexus_monitored_symbols');
+    if (savedSymbols && JSON.parse(savedSymbols).length > 0) {
+      console.log('📊 Loaded saved symbols from storage');
     }
-  };
+  }, []);
 
-  const fetchAllData = async () => {
-    setLoading(true);
+  // Refs for performance
+  const updateIntervalRef = useRef(null);
+  const previousDataRef = useRef({});
+
+  // Memoized helper functions
+  const formatPrice = useCallback((price) => {
+    if (typeof price !== 'number') return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(price);
+  }, []);
+
+  const formatVolume = useCallback((volume) => {
+    if (typeof volume !== 'number') return 'N/A';
+    if (volume >= 1e9) return `${(volume / 1e9).toFixed(2)}B`;
+    if (volume >= 1e6) return `${(volume / 1e6).toFixed(2)}M`;
+    if (volume >= 1e3) return `${(volume / 1e3).toFixed(2)}K`;
+    return volume.toFixed(0);
+  }, []);
+
+  const getPriceAnimationClass = useCallback((symbol) => {
+    return priceAnimations[symbol] || '';
+  }, [priceAnimations]);
+
+  const getConnectionStatusIcon = useCallback(() => {
+    switch (connectionStatus) {
+      case 'connected':
+        return <Wifi className="w-4 h-4 text-[var(--success)]" />;
+      case 'connecting':
+        return <RefreshCw className="w-4 h-4 text-[var(--warning)] animate-spin" />;
+      case 'disconnected':
+        return <WifiOff className="w-4 h-4 text-[var(--error)]" />;
+      default:
+        return <Wifi className="w-4 h-4 text-[var(--text-muted)]" />;
+    }
+  }, [connectionStatus]);
+
+  const getConnectionStatusText = useCallback(() => {
+    switch (connectionStatus) {
+      case 'connected':
+        return 'Connected';
+      case 'connecting':
+        return 'Connecting...';
+      case 'disconnected':
+        return 'Disconnected';
+      default:
+        return 'Unknown';
+    }
+  }, [connectionStatus]);
+
+  // Optimized data fetching with caching
+  const fetchAllData = useCallback(async () => {
+    if (monitoredSymbols.length === 0) return;
+
+    setIsLoading(true);
     setConnectionStatus('connecting');
-    try {
-      const results = await Promise.all(monitoredSymbols.map(fetchSymbolData));
-      const newData = {};
-      results.forEach(result => { newData[result.symbol] = result; });
-      setSymbolData(newData);
-      setLastUpdate(new Date());
-      setConnectionStatus(results.some(r => r.status === 'success') ? 'connected' : 'error');
-    } catch (error) {
-      setConnectionStatus('error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchAllData();
-    const interval = setInterval(fetchAllData, 30000);
-    return () => clearInterval(interval);
+    try {
+      const promises = monitoredSymbols.map(async (symbol) => {
+        try {
+          const response = await apiService.getMarketData(symbol);
+          return { symbol, data: response };
+        } catch (error) {
+          console.error(`Error fetching data for ${symbol}:`, error);
+          return { symbol, data: { status: 'error', error: error.message } };
+        }
+      });
+
+      const results = await Promise.allSettled(promises);
+      const newData = {};
+      const newAnimations = {};
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const { symbol, data } = result.value;
+          newData[symbol] = data;
+
+          // Check for price changes and set animations
+          const previousData = previousDataRef.current[symbol];
+          if (previousData && data.status === 'success' && previousData.status === 'success') {
+            const currentPrice = data.data?.price;
+            const previousPrice = previousData.data?.price;
+            
+            if (currentPrice !== undefined && previousPrice !== undefined) {
+              if (currentPrice > previousPrice) {
+                newAnimations[symbol] = 'animate-price-up';
+              } else if (currentPrice < previousPrice) {
+                newAnimations[symbol] = 'animate-price-down';
+              }
+            }
+          }
+        } else {
+          // Handle rejected promises
+          const symbol = monitoredSymbols[index];
+          newData[symbol] = { status: 'error', error: result.reason?.message || 'Unknown error' };
+        }
+      });
+
+      setSymbolData(prev => ({ ...prev, ...newData }));
+      setPriceAnimations(newAnimations);
+      setConnectionStatus('connected');
+
+      // Clear animations after delay
+      setTimeout(() => {
+        setPriceAnimations({});
+      }, 600);
+
+      // Update previous data reference
+      previousDataRef.current = newData;
+
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+      setConnectionStatus('disconnected');
+    } finally {
+      setIsLoading(false);
+    }
   }, [monitoredSymbols]);
 
-  const handleCardClick = (symbol) => {
-    const data = symbolData[symbol];
-    if (data && data.status === 'success') {
-      setExpandedSymbol(symbol);
-      setExpandedData(data);
-    }
-  };
+  // Optimized symbol management
+  const addSymbol = useCallback((symbol) => {
+    if (!symbol || monitoredSymbols.includes(symbol)) return;
+    const newSymbols = [...monitoredSymbols, symbol];
+    setMonitoredSymbols(newSymbols);
+    // Immediately save to localStorage
+    localStorage.setItem('nexus_monitored_symbols', JSON.stringify(newSymbols));
+  }, [monitoredSymbols]);
 
-  const handleBackToGrid = () => {
-    setExpandedSymbol(null);
-    setExpandedData(null);
-  };
-
-  const addSymbol = (symbol) => {
-    const upperSymbol = symbol.toUpperCase().trim();
-    if (!upperSymbol) return;
-    
-    console.log('Adding symbol:', upperSymbol, 'Current symbols:', monitoredSymbols);
-    if (!monitoredSymbols.includes(upperSymbol)) {
-      setMonitoredSymbols(prev => {
-        const newSymbols = [...prev, upperSymbol];
-        console.log('Updated symbols:', newSymbols);
-        return newSymbols;
-      });
-      // Immediately fetch data for the new symbol
-      fetchSymbolData(upperSymbol).then(data => {
-        setSymbolData(prev => ({ ...prev, [upperSymbol]: data }));
-      }).catch(error => {
-        console.error('Error fetching data for new symbol:', upperSymbol, error);
-      });
-    } else {
-      console.log('Symbol already exists:', upperSymbol);
-    }
-  };
-
-  const removeSymbol = (symbol) => {
-    console.log('Removing symbol:', symbol, 'Current symbols:', monitoredSymbols);
-    setMonitoredSymbols(prev => {
-      const newSymbols = prev.filter(s => s !== symbol);
-      console.log('After removal:', newSymbols);
-      return newSymbols;
+  const removeSymbol = useCallback((symbol) => {
+    const newSymbols = monitoredSymbols.filter(s => s !== symbol);
+    setMonitoredSymbols(newSymbols);
+    setSymbolData(prev => {
+      const newData = { ...prev };
+      delete newData[symbol];
+      return newData;
     });
-  };
+    setPriceAnimations(prev => {
+      const newAnimations = { ...prev };
+      delete newAnimations[symbol];
+      return newAnimations;
+    });
+    // Immediately save to localStorage
+    localStorage.setItem('nexus_monitored_symbols', JSON.stringify(newSymbols));
+  }, [monitoredSymbols]);
 
-  // Click outside handler for expanded view
+  const clearAllSymbols = useCallback(() => {
+    setMonitoredSymbols([]);
+    setSymbolData({});
+    setPriceAnimations({});
+    localStorage.removeItem('nexus_monitored_symbols');
+  }, []);
+
+  const handleCardClick = useCallback((symbol) => {
+    console.log(`Card clicked: ${symbol}`);
+    // Navigate to Analysis page with symbol context
+    navigate('/analysis', { state: { selectedSymbol: symbol } });
+  }, [navigate]);
+
+  // Memoized symbol cards for better performance
+  const symbolCards = useMemo(() => {
+    return monitoredSymbols.map((symbol) => (
+      <SymbolCard
+        key={symbol}
+        symbol={symbol}
+        data={symbolData[symbol]}
+        animationClass={getPriceAnimationClass(symbol)}
+        isLiveMode={isLiveMode}
+        onCardClick={handleCardClick}
+        onRemove={removeSymbol}
+      />
+    ));
+  }, [monitoredSymbols, symbolData, getPriceAnimationClass, isLiveMode, handleCardClick, removeSymbol]);
+
+  // Optimized live mode management
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (expandedRef.current && !expandedRef.current.contains(event.target)) {
-        handleBackToGrid();
+    if (isLiveMode && monitoredSymbols.length > 0) {
+      fetchAllData();
+      updateIntervalRef.current = setInterval(fetchAllData, updateFrequency);
+    } else {
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current);
+        updateIntervalRef.current = null;
       }
-    };
-
-    if (expandedSymbol) {
-      document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current);
+      }
     };
-  }, [expandedSymbol]);
+  }, [isLiveMode, updateFrequency, monitoredSymbols.length, fetchAllData]);
 
-  const formatPrice = (price) => price > 0 ? `$${price.toFixed(2)}` : 'N/A';
+  // Clear animations effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPriceAnimations({});
+    }, 600);
 
-  if (expandedSymbol && expandedData) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Detailed Analysis - {expandedSymbol}</h1>
-            <p className="text-[var(--text-muted)]">Click outside or "Back" to return to grid</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={fetchAllData}
-              disabled={loading}
-              className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-            <button
-              onClick={handleBackToGrid}
-              className="px-4 py-2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors flex items-center gap-2"
-            >
-              <X className="w-4 h-4" />
-              Back to Grid
-            </button>
-          </div>
-        </div>
+    return () => clearTimeout(timer);
+  }, [priceAnimations]);
 
-        {/* Main Price Display */}
-        <div className="professional-card" ref={expandedRef}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold text-[var(--text-primary)]">{expandedSymbol}</h2>
-            <div className="flex items-center space-x-2">
-              {expandedData.change >= 0 ? (
-                <TrendingUp className="w-8 h-8 text-[var(--success)]" />
-              ) : (
-                <TrendingDown className="w-8 h-8 text-[var(--error)]" />
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center p-6 bg-[var(--bg-tertiary)] rounded-lg">
-              <div className="text-5xl font-bold text-[var(--text-primary)] mb-2">
-                {formatPrice(expandedData.price)}
-              </div>
-              <div className="text-lg text-[var(--text-muted)]">Current Price</div>
-            </div>
-            
-            <div className="text-center p-6 bg-[var(--bg-tertiary)] rounded-lg">
-              <div className={`text-3xl font-semibold mb-2 ${expandedData.change >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
-                {expandedData.change >= 0 ? '+' : ''}${expandedData.change.toFixed(2)}
-              </div>
-              <div className="text-lg text-[var(--text-muted)]">Change ($)</div>
-            </div>
-            
-            <div className="text-center p-6 bg-[var(--bg-tertiary)] rounded-lg">
-              <div className={`text-3xl font-semibold mb-2 ${expandedData.change >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
-                {expandedData.change >= 0 ? '+' : ''}{expandedData.changePercent.toFixed(2)}%
-              </div>
-              <div className="text-lg text-[var(--text-muted)]">Change (%)</div>
-            </div>
-            
-            <div className="text-center p-6 bg-[var(--bg-tertiary)] rounded-lg">
-              <div className="text-3xl font-semibold text-[var(--text-primary)] mb-2">
-                {(expandedData.volume || 0).toLocaleString()}
-              </div>
-              <div className="text-lg text-[var(--text-muted)]">Volume</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Market Data Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="professional-card text-center">
-            <div className="flex items-center justify-center mb-4">
-              <TrendingUp className="w-6 h-6 text-[var(--success)] mr-2" />
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Day High</h3>
-            </div>
-            <div className="text-2xl font-bold text-[var(--text-primary)]">
-              {formatPrice(expandedData.high)}
-            </div>
-            <div className="text-sm text-[var(--text-muted)] mt-2">
-              Highest price today
-            </div>
-          </div>
-
-          <div className="professional-card text-center">
-            <div className="flex items-center justify-center mb-4">
-              <TrendingDown className="w-6 h-6 text-[var(--error)] mr-2" />
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Day Low</h3>
-            </div>
-            <div className="text-2xl font-bold text-[var(--text-primary)]">
-              {formatPrice(expandedData.low)}
-            </div>
-            <div className="text-sm text-[var(--text-muted)] mt-2">
-              Lowest price today
-            </div>
-          </div>
-
-          <div className="professional-card text-center">
-            <div className="flex items-center justify-center mb-4">
-              <Activity className="w-6 h-6 text-[var(--info)] mr-2" />
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Opening Price</h3>
-            </div>
-            <div className="text-2xl font-bold text-[var(--text-primary)]">
-              {formatPrice(expandedData.open)}
-            </div>
-            <div className="text-sm text-[var(--text-muted)] mt-2">
-              Market open price
-            </div>
-          </div>
-
-          <div className="professional-card text-center">
-            <div className="flex items-center justify-center mb-4">
-              <BarChart3 className="w-6 h-6 text-[var(--warning)] mr-2" />
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Trading Volume</h3>
-            </div>
-            <div className="text-2xl font-bold text-[var(--text-primary)]">
-              {(expandedData.volume || 0).toLocaleString()}
-            </div>
-            <div className="text-sm text-[var(--text-muted)] mt-2">
-              Shares traded today
-            </div>
-          </div>
-        </div>
-
-        {/* Analysis Summary */}
-        <div className="professional-card">
-          <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Market Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-6 bg-[var(--bg-tertiary)] rounded-lg">
-              <div className="text-sm text-[var(--text-muted)] mb-2">Daily Range</div>
-              <div className="text-xl font-semibold text-[var(--text-primary)]">
-                {formatPrice(expandedData.low)} - {formatPrice(expandedData.high)}
-              </div>
-              <div className="text-sm text-[var(--text-muted)] mt-1">
-                Range: ${(expandedData.high - expandedData.low).toFixed(2)}
-              </div>
-            </div>
-            <div className="text-center p-6 bg-[var(--bg-tertiary)] rounded-lg">
-              <div className="text-sm text-[var(--text-muted)] mb-2">Market Movement</div>
-              <div className={`text-xl font-semibold ${expandedData.change >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
-                {expandedData.change >= 0 ? '+' : ''}{expandedData.changePercent.toFixed(2)}%
-              </div>
-              <div className="text-sm text-[var(--text-muted)] mt-1">
-                Since market open
-              </div>
-            </div>
-            <div className="text-center p-6 bg-[var(--bg-tertiary)] rounded-lg">
-              <div className="text-sm text-[var(--text-muted)] mb-2">Market Status</div>
-              <div className="text-xl font-semibold text-[var(--success)]">
-                Active
-              </div>
-              <div className="text-sm text-[var(--text-muted)] mt-1">
-                Live trading
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Price Analysis */}
-        <div className="professional-card">
-          <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Price Analysis</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b border-[var(--border-primary)]">
-                <span className="text-[var(--text-secondary)]">Current Price:</span>
-                <span className="font-semibold text-[var(--text-primary)]">{formatPrice(expandedData.price)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[var(--border-primary)]">
-                <span className="text-[var(--text-secondary)]">Opening Price:</span>
-                <span className="font-semibold text-[var(--text-primary)]">{formatPrice(expandedData.open)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[var(--border-primary)]">
-                <span className="text-[var(--text-secondary)]">Day's Range:</span>
-                <span className="font-semibold text-[var(--text-primary)]">{formatPrice(expandedData.low)} - {formatPrice(expandedData.high)}</span>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b border-[var(--border-primary)]">
-                <span className="text-[var(--text-secondary)]">Volume:</span>
-                <span className="font-semibold text-[var(--text-primary)]">{(expandedData.volume || 0).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[var(--border-primary)]">
-                <span className="text-[var(--text-secondary)]">Change:</span>
-                <span className={`font-semibold ${expandedData.change >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
-                  {expandedData.change >= 0 ? '+' : ''}${expandedData.change.toFixed(2)} ({expandedData.change >= 0 ? '+' : ''}{expandedData.changePercent.toFixed(2)}%)
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[var(--border-primary)]">
-                <span className="text-[var(--text-secondary)]">Last Updated:</span>
-                <span className="font-semibold text-[var(--text-primary)]">{lastUpdate?.toLocaleTimeString() || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Performance monitoring
+  useEffect(() => {
+    // renderCountRef.current += 1; // This line was removed as per the edit hint
+    // if (renderCountRef.current % 100 === 0) { // This line was removed as per the edit hint
+    //   console.log(`DataMonitor rendered ${renderCountRef.current} times`); // This line was removed as per the edit hint
+    // } // This line was removed as per the edit hint
+  });
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6 performance-optimized">
+      {/* Performance-optimized Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Real-Time Data Monitor</h1>
-          <p className="text-[var(--text-muted)]">Live monitoring of market data - Click any card for detailed analysis</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
+            Data Monitor
+          </h1>
+          <p className="text-[var(--text-muted)]">
+            Real-time market data monitoring with enhanced performance
+          </p>
         </div>
-        <div className="flex items-center gap-4 w-full max-w-xs">
-          <SymbolSelector
-            selectedSymbol=""
-            onSymbolChange={addSymbol}
-            placeholder="Add new symbol..."
-          />
+
+        {/* Live Controls */}
+        <div className="flex items-center gap-4">
+          {/* Connection Status */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)] ultra-smooth">
+            {getConnectionStatusIcon()}
+            <span className="text-sm text-[var(--text-muted)]">
+              {getConnectionStatusText()}
+            </span>
+          </div>
+
+          {/* Live Mode Toggle */}
           <button
-            onClick={fetchAllData}
-            disabled={loading}
-            className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 flex items-center gap-2"
+            onClick={() => setIsLiveMode(!isLiveMode)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 performance-button ${
+              isLiveMode
+                ? 'bg-[var(--success)]/10 border-[var(--success)]/30 text-[var(--success)]'
+                : 'bg-[var(--bg-secondary)] border-[var(--border-primary)] text-[var(--text-muted)]'
+            }`}
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <Zap className={`w-4 h-4 ${isLiveMode ? 'animate-pulse' : ''}`} />
+            <span className="text-sm font-medium">
+              {isLiveMode ? 'Live' : 'Static'}
+            </span>
           </button>
+
+          {/* Update Frequency */}
+          {isLiveMode && (
+            <select
+              value={updateFrequency}
+              onChange={(e) => setUpdateFrequency(Number(e.target.value))}
+              className="px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg text-sm text-[var(--text-primary)] ultra-smooth"
+            >
+              <option value={2000}>2s</option>
+              <option value={3000}>3s</option>
+              <option value={5000}>5s</option>
+              <option value={10000}>10s</option>
+              <option value={30000}>30s</option>
+            </select>
+          )}
         </div>
       </div>
 
-      {lastUpdate && (
-        <div className="text-sm text-[var(--text-muted)]">
-          Last updated: {lastUpdate.toLocaleTimeString()}
+      {/* Symbol Selector */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <SymbolSelector onSymbolChange={addSymbol} />
         </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {monitoredSymbols.map((symbol) => {
-          const data = symbolData[symbol];
-          const isPositive = data && data.change > 0;
-          
-          return (
-            <div
-              key={symbol}
-              className="professional-card cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105 relative"
-              onClick={() => handleCardClick(symbol)}
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-[var(--text-muted)]">
+            {monitoredSymbols.length} symbols monitored
+          </div>
+          {monitoredSymbols.length > 0 && (
+            <button
+              onClick={clearAllSymbols}
+              className="px-3 py-1 text-xs bg-[var(--error)]/10 border border-[var(--error)]/30 text-[var(--error)] rounded-lg hover:bg-[var(--error)]/20 transition-colors duration-200 performance-button"
+              title="Clear all symbols"
             >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeSymbol(symbol);
-                }}
-                className="absolute top-2 right-2 p-1 hover:bg-[var(--bg-tertiary)] rounded-full transition-colors"
-              >
-                <X className="w-4 h-4 text-[var(--text-muted)] hover:text-[var(--error)]" />
+              Clear All
               </button>
-              <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-[var(--text-primary)]">{symbol}</h3>
-                <div className={`w-2 h-2 rounded-full ${data?.status === 'success' ? 'bg-[var(--success)] animate-pulse' : 'bg-[var(--error)]'}`} />
+          )}
+        </div>
               </div>
 
-              {!data || (loading && !data.price) ? (
-                <div className="animate-pulse h-24 bg-[var(--bg-tertiary)] rounded-md"></div>
-              ) : data.status === 'error' ? (
-                <div className="text-xs text-[var(--error)]">Error: {data.error}</div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-[var(--text-primary)]">{formatPrice(data.price)}</div>
-                  <div className={`flex items-center space-x-1 text-sm ${isPositive ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
-                    {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                    <span>{data.change.toFixed(2)} ({data.changePercent.toFixed(2)}%)</span>
-                  </div>
-                  <div className="text-xs text-[var(--text-muted)] space-y-1 pt-2 border-t border-[var(--border-primary)]">
-                    <div className="flex justify-between"><span>Open:</span><span>{formatPrice(data.open)}</span></div>
-                    <div className="flex justify-between"><span>High:</span><span>{formatPrice(data.high)}</span></div>
-                    <div className="flex justify-between"><span>Low:</span><span>{formatPrice(data.low)}</span></div>
-                  </div>
+      {/* Performance-optimized Data Grid */}
+      <div className="space-y-3">
+        {monitoredSymbols.length === 0 ? (
+          <div className="text-center py-12">
+            <BarChart3 className="w-16 h-16 text-[var(--text-muted)] mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">No Symbols Added</h3>
+            <p className="text-[var(--text-muted)] mb-4">Add symbols above to start monitoring live market data</p>
+          </div>
+        ) : (
+          <>
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-4">
+                <RefreshCw className="w-5 h-5 text-[var(--accent-primary)] animate-spin mr-2" />
+                <span className="text-sm text-[var(--text-muted)]">Updating market data...</span>
                 </div>
               )}
+            
+            <div className="elegant-grid">
+              {symbolCards}
             </div>
-          );
-        })}
+          </>
+        )}
       </div>
     </div>
   );
 };
 
-export default DataMonitor;
+export default React.memo(DataMonitor);

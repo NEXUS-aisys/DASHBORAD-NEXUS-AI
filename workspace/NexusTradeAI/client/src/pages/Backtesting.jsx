@@ -209,23 +209,53 @@ const Backtesting = () => {
     }
   };
 
-  // Mock historical data generator (fallback)
+  // Improved historical data generator (fallback with realistic patterns)
   const generateMockHistoricalData = (symbol, startDate, endDate) => {
     const data = [];
     const start = new Date(startDate);
     const end = new Date(endDate);
-    let currentPrice = 100 + Math.random() * 100;
+    
+    // Use symbol-specific base prices for more realism
+    const basePrices = {
+      'BTC': 45000,
+      'ETH': 3000,
+      'AAPL': 150,
+      'TSLA': 200,
+      'GOOGL': 140,
+      'MSFT': 300,
+      'AMZN': 130,
+      'NFLX': 400,
+      'NQ': 15000,
+      'ES': 4500,
+      'YM': 35000,
+      'GC': 2000,
+      'CL': 80
+    };
+    
+    let currentPrice = basePrices[symbol] || 100;
     
     for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
       if (date.getDay() !== 0 && date.getDay() !== 6) { // Skip weekends
-        const change = (Math.random() - 0.5) * 0.05; // ±2.5% daily change
+        // More realistic volatility based on asset type
+        const volatility = symbol.includes('BTC') || symbol.includes('ETH') ? 0.08 : 
+                          symbol.includes('NQ') || symbol.includes('ES') || symbol.includes('YM') ? 0.03 :
+                          symbol.includes('GC') || symbol.includes('CL') ? 0.04 : 0.02;
+        
+        const change = (Math.random() - 0.5) * volatility;
         currentPrice *= (1 + change);
+        
+        // Ensure price doesn't go negative
+        currentPrice = Math.max(currentPrice, 0.01);
+        
+        const open = currentPrice * (1 + (Math.random() - 0.5) * 0.01);
+        const high = Math.max(open, currentPrice) * (1 + Math.random() * 0.02);
+        const low = Math.min(open, currentPrice) * (1 - Math.random() * 0.02);
         
         data.push({
           date: new Date(date),
-          open: currentPrice * (1 + (Math.random() - 0.5) * 0.01),
-          high: currentPrice * (1 + Math.random() * 0.02),
-          low: currentPrice * (1 - Math.random() * 0.02),
+          open: open,
+          high: high,
+          low: low,
           close: currentPrice,
           volume: Math.floor(Math.random() * 1000000) + 100000
         });

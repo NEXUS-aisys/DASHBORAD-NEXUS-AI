@@ -1,3 +1,8 @@
+const AlphaVantageProvider = require('./dataProviders/coreProviders/alphaVantageProvider');
+const FinnhubProvider = require('./dataProviders/coreProviders/finnhubProvider');
+const MockRealTimeProvider = require('./dataProviders/coreProviders/mockRealTimeProvider');
+const BybitProvider = require('./dataProviders/coreProviders/bybitProvider');
+const PolygonProvider = require('./dataProviders/coreProviders/polygonProvider');
 const YahooFinanceProvider = require('./dataProviders/coreProviders/yahooFinanceProvider');
 const RithmicWebSocketProvider = require('./dataProviders/coreProviders/rithmicWebSocketProvider');
 const EventEmitter = require('events');
@@ -40,10 +45,20 @@ class DataSourceManager extends EventEmitter {
    * @private
    */
   async initializeCoreProviders() {
-    // Yahoo Finance Provider (Always available)
-    const yahooProvider = new YahooFinanceProvider();
-    this.coreProviders.set('yahoo_finance', yahooProvider);
-    console.log('📊 Yahoo Finance provider registered');
+    // Yahoo Finance Provider (Real-time data - FREE)
+    const yahooFinanceProvider = new YahooFinanceProvider();
+    this.coreProviders.set('yahoo_finance', yahooFinanceProvider);
+    console.log('📈 Yahoo Finance provider registered (Primary - Real data)');
+
+    // Polygon.io Provider (Your API key - Backup)
+    const polygonProvider = new PolygonProvider();
+    this.coreProviders.set('polygon', polygonProvider);
+    console.log('🔷 Polygon.io provider registered (Backup)');
+
+    // Bybit Provider (Real-time crypto data)
+    const bybitProvider = new BybitProvider();
+    this.coreProviders.set('bybit', bybitProvider);
+    console.log('₿ Bybit provider registered (Crypto)');
 
     // Rithmic WebSocket Provider (Professional futures data)
     // NOTE: Temporarily disabled until Rithmic WebSocket server is implemented
@@ -243,6 +258,10 @@ class DataSourceManager extends EventEmitter {
     try {
       const availableProviders = await this.getAvailableProviders(userId);
       
+      if (availableProviders.length === 0) {
+        throw new Error('No data providers available');
+      }
+
       let targetProvider;
       if (provider) {
         targetProvider = availableProviders.find(p => p.name === provider);
@@ -255,17 +274,58 @@ class DataSourceManager extends EventEmitter {
       }
 
       if (!targetProvider) {
+        // Fallback to first available provider
+        targetProvider = availableProviders[0];
+      }
+
+      if (!targetProvider || typeof targetProvider.getMarketData !== 'function') {
         throw new Error(`No suitable provider found for symbol ${symbol}`);
       }
 
-      if (typeof targetProvider.getMarketData === 'function') {
-        return await targetProvider.getMarketData(symbol);
-      } else {
-        throw new Error(`Provider ${targetProvider.name} does not support market data`);
+      try {
+        const marketData = await targetProvider.getMarketData(symbol);
+        return {
+          status: 'success',
+          data: marketData,
+          provider: targetProvider.name,
+          fallback: false
+        };
+      } catch (providerError) {
+        console.error(`Primary provider ${targetProvider.name} failed for ${symbol}:`, providerError.message);
+        
+        // Smart fallback system for stock symbols
+        const symbolUpper = symbol.toUpperCase();
+        
+        // For crypto, try Bybit as fallback
+        if (symbolUpper.includes('USDT') || symbolUpper.includes('BTC') || symbolUpper.includes('ETH')) {
+          const bybitProvider = availableProviders.find(p => p.name === 'bybit');
+          if (bybitProvider && bybitProvider !== targetProvider) {
+            try {
+              console.log(`🔄 Trying Bybit fallback for ${symbol}`);
+              const fallbackData = await bybitProvider.getMarketData(symbol);
+              return {
+                status: 'success',
+                data: fallbackData,
+                provider: 'bybit',
+                fallback: true
+              };
+            } catch (fallbackError) {
+              console.error(`Bybit fallback also failed for ${symbol}:`, fallbackError.message);
+            }
+          }
+        }
+
+        // No fallback - only real data or error
+        console.log(`❌ All real data providers failed for ${symbol}`);
+        throw new Error(`No real market data available for ${symbol}. All providers are rate limited.`);
       }
     } catch (error) {
       console.error(`Market data error for ${symbol}:`, error);
-      throw error;
+      return {
+        status: 'error',
+        error: error.message,
+        symbol: symbol
+      };
     }
   }
 
@@ -277,7 +337,7 @@ class DataSourceManager extends EventEmitter {
   async getAvailableProviders(userId = null) {
     const providers = [];
 
-    // Always include core providers
+    // Always include core providers (including for test endpoints with null userId)
     for (const [name, provider] of this.coreProviders) {
       providers.push(provider);
     }
@@ -301,19 +361,23 @@ class DataSourceManager extends EventEmitter {
    */
   async findBestProviderForSymbol(symbol, availableProviders) {
     // Priority logic:
-    // 1. User's crypto APIs for crypto symbols
+    // 1. Bybit for crypto symbols (USDT pairs)
     // 2. Rithmic for futures symbols
-    // 3. Yahoo Finance as fallback
+    // 3. Stock providers with fallback system
 
     const symbolUpper = symbol.toUpperCase();
+    console.log(`🔍 Finding best provider for ${symbol} (${symbolUpper})`);
+    console.log(`📊 Available providers:`, availableProviders.map(p => p.name));
 
-    // Check for crypto patterns
-    if (symbolUpper.includes('BTC') || symbolUpper.includes('ETH') || 
-        symbolUpper.includes('USDT') || symbolUpper.endsWith('-USD')) {
-      const cryptoProvider = availableProviders.find(p => 
-        p.name.includes('binance') || p.name.includes('coinbase') || p.name.includes('crypto')
-      );
-      if (cryptoProvider) return cryptoProvider;
+    // Check for crypto patterns (USDT pairs)
+    if (symbolUpper.includes('USDT') || symbolUpper.includes('BTC') || symbolUpper.includes('ETH')) {
+      const bybitProvider = availableProviders.find(p => p.name === 'bybit');
+      if (bybitProvider) {
+        console.log(`✅ Selected Bybit provider for ${symbol}`);
+        return bybitProvider;
+      } else {
+        console.log(`❌ Bybit provider not found for ${symbol}`);
+      }
     }
 
     // Check for futures patterns
@@ -322,11 +386,22 @@ class DataSourceManager extends EventEmitter {
       if (rithmicProvider) return rithmicProvider;
     }
 
-    // Fallback to Yahoo Finance
-    const yahooProvider = availableProviders.find(p => p.name === 'yahoo_finance');
-    if (yahooProvider) return yahooProvider;
+    // Stock providers - Polygon for real data (since Yahoo Finance is often rate limited)
+    const stockProviders = [
+      'polygon',          // Primary - Your API key (more reliable)
+      'yahoo_finance'     // Backup - Free but often rate limited
+    ];
+
+    for (const providerName of stockProviders) {
+      const provider = availableProviders.find(p => p.name === providerName);
+      if (provider) {
+        console.log(`✅ Selected ${providerName} provider for ${symbol}`);
+        return provider;
+      }
+    }
 
     // Return first available provider
+    console.log(`⚠️ No specific provider found, using first available:`, availableProviders[0]?.name);
     return availableProviders[0] || null;
   }
 

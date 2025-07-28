@@ -1,16 +1,16 @@
-import {
+import { 
     AlertCircle,
     ArrowDownRight,
     ArrowUpRight,
     BarChart,
-    Brain,
+  Brain, 
     CheckCircle,
-    DollarSign,
+  DollarSign, 
     Eye,
     HelpCircle,
     Lightbulb,
     Minus,
-    RefreshCw,
+  RefreshCw, 
     Target,
     TrendingDown,
     TrendingUp,
@@ -307,12 +307,12 @@ const AIInsights = () => {
     <div className="p-6 bg-[var(--bg-primary)] min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div>
+          <div>
           <h1 className="text-heading text-[var(--text-primary)]">AI Insights</h1>
           <p className="text-[var(--text-muted)]">Intelligent analysis powered by machine learning</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button
+          <button 
             onClick={loadInsightsData}
             disabled={isLoading}
             className="flex items-center space-x-2 px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:bg-[var(--accent-secondary)] disabled:opacity-50"
@@ -377,7 +377,7 @@ const AIInsights = () => {
               </div>
               <p className="text-xs text-[var(--text-muted)]">
                 Actionable insights, model performance highlights, or strategic recommendations.
-              </p>
+          </p>
             </div>
           </div>
         </div>

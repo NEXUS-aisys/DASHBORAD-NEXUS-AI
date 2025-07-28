@@ -617,3 +617,610 @@
   --border-accent: #db2777;
 }
 
+/* Live Price Animation Classes - Enhanced for Professional Trading Terminal */
+.animate-price-up {
+  animation: priceUpElegant 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(34, 197, 94, 0.03));
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+}
+
+.animate-price-down {
+  animation: priceDownElegant 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03));
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+@keyframes priceUpElegant {
+  0% {
+    transform: scale(1);
+    background: rgba(34, 197, 94, 0.15);
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    transform: scale(1.01);
+    background: rgba(34, 197, 94, 0.2);
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(34, 197, 94, 0.03));
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+  }
+}
+
+@keyframes priceDownElegant {
+  0% {
+    transform: scale(1);
+    background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    transform: scale(1.01);
+    background: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03));
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+  }
+}
+
+/* Professional Trading Terminal Card Styles */
+.trading-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border-primary);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trading-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: var(--accent-primary);
+}
+
+.trading-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.05), transparent);
+  transition: left 0.5s ease;
+}
+
+.trading-card:hover::before {
+  left: 100%;
+}
+
+/* Elegant Grid Layout */
+.elegant-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .elegant-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .elegant-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
+}
+
+@media (min-width: 1536px) {
+  .elegant-grid {
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  }
+}
+
+/* Live Data Pulse Animation - Enhanced */
+.live-pulse {
+  animation: livePulseElegant 2s infinite;
+}
+
+@keyframes livePulseElegant {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Connection Status Animations - Enhanced */
+.connection-connecting {
+  animation: connectingPulseElegant 1.5s infinite;
+}
+
+@keyframes connectingPulseElegant {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.05);
+  }
+}
+
+/* Real-time Data Streaming Effect - Enhanced */
+.data-stream {
+  position: relative;
+  overflow: hidden;
+}
+
+.data-stream::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.08), transparent);
+  animation: dataStreamElegant 4s infinite;
+}
+
+@keyframes dataStreamElegant {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* Price Change Flash Animation - Enhanced */
+.price-flash {
+  animation: priceFlashElegant 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes priceFlashElegant {
+  0% {
+    background: transparent;
+    transform: scale(1);
+  }
+  50% {
+    background: rgba(59, 130, 246, 0.15);
+    transform: scale(1.02);
+  }
+  100% {
+    background: transparent;
+    transform: scale(1);
+  }
+}
+
+/* Live Mode Active State - Enhanced */
+.live-mode-active {
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  animation: liveModeGlowElegant 3s infinite;
+}
+
+@keyframes liveModeGlowElegant {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
+  }
+}
+
+/* Professional Typography Enhancements */
+.trading-symbol {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.trading-price {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Elegant Hover Effects */
+.elegant-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.elegant-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design Enhancements */
+@media (max-width: 768px) {
+  .elegant-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .trading-card {
+    border-radius: 8px;
+  }
+  
+  .trading-price {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  .elegant-grid {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* Performance Optimizations - GPU Acceleration & Smooth Rendering */
+.performance-optimized {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimized Card Rendering */
+.trading-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border-primary);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow, border-color;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.trading-card:hover {
+  transform: translateY(-2px) scale(1.01) translateZ(0);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: var(--accent-primary);
+}
+
+.trading-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.05), transparent);
+  transition: left 0.5s ease;
+  will-change: left;
+}
+
+.trading-card:hover::before {
+  left: 100%;
+}
+
+/* Ultra-Smooth Grid Layout with GPU Acceleration */
+.elegant-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  will-change: grid-template-columns;
+  transform: translateZ(0);
+}
+
+/* Optimized Price Animations with GPU Acceleration */
+.animate-price-up {
+  animation: priceUpElegant 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(34, 197, 94, 0.03));
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+  will-change: transform, background, box-shadow;
+  transform: translateZ(0);
+}
+
+.animate-price-down {
+  animation: priceDownElegant 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03));
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+  will-change: transform, background, box-shadow;
+  transform: translateZ(0);
+}
+
+@keyframes priceUpElegant {
+  0% {
+    transform: scale(1) translateZ(0);
+    background: rgba(34, 197, 94, 0.15);
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    transform: scale(1.01) translateZ(0);
+    background: rgba(34, 197, 94, 0.2);
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.4);
+  }
+  100% {
+    transform: scale(1) translateZ(0);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(34, 197, 94, 0.03));
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+  }
+}
+
+@keyframes priceDownElegant {
+  0% {
+    transform: scale(1) translateZ(0);
+    background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    transform: scale(1.01) translateZ(0);
+    background: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
+  }
+  100% {
+    transform: scale(1) translateZ(0);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.03));
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+  }
+}
+
+/* Optimized Live Pulse with GPU Acceleration */
+.live-pulse {
+  animation: livePulseElegant 2s infinite;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+@keyframes livePulseElegant {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1) translateZ(0);
+  }
+}
+
+/* Optimized Connection Status Animations */
+.connection-connecting {
+  animation: connectingPulseElegant 1.5s infinite;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+@keyframes connectingPulseElegant {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.05) translateZ(0);
+  }
+}
+
+/* Optimized Data Streaming Effect */
+.data-stream {
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.data-stream::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.08), transparent);
+  animation: dataStreamElegant 4s infinite;
+  will-change: left, opacity;
+}
+
+@keyframes dataStreamElegant {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* Optimized Price Flash Animation */
+.price-flash {
+  animation: priceFlashElegant 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: background, transform;
+  transform: translateZ(0);
+}
+
+@keyframes priceFlashElegant {
+  0% {
+    background: transparent;
+    transform: scale(1) translateZ(0);
+  }
+  50% {
+    background: rgba(59, 130, 246, 0.15);
+    transform: scale(1.02) translateZ(0);
+  }
+  100% {
+    background: transparent;
+    transform: scale(1) translateZ(0);
+  }
+}
+
+/* Optimized Live Mode Active State */
+.live-mode-active {
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  animation: liveModeGlowElegant 3s infinite;
+  will-change: box-shadow;
+}
+
+@keyframes liveModeGlowElegant {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
+  }
+}
+
+/* Optimized Typography with GPU Acceleration */
+.trading-symbol {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.trading-price {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Optimized Hover Effects */
+.elegant-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+  transform: translateZ(0);
+}
+
+.elegant-hover:hover {
+  transform: translateY(-1px) translateZ(0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design with GPU Acceleration */
+@media (max-width: 768px) {
+  .elegant-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .trading-card {
+    border-radius: 8px;
+    transform: translateZ(0);
+  }
+  
+  .trading-price {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  .elegant-grid {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* Performance Monitoring Styles */
+.performance-stats {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Ultra-Smooth Transitions */
+.ultra-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity, background, box-shadow;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimized Button Interactions */
+.performance-button {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, background, box-shadow;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.performance-button:hover {
+  transform: translateY(-1px) translateZ(0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.performance-button:active {
+  transform: translateY(0) translateZ(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Optimized Loading States */
+.performance-loading {
+  animation: performancePulse 1.5s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes performancePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Memory-Efficient Animations */
+.memory-efficient {
+  contain: layout style paint;
+  will-change: auto;
+}
+
+/* Optimized for High Refresh Rate Displays */
+@media (prefers-reduced-motion: no-preference) {
+  .high-refresh {
+    animation-duration: 0.016s; /* 60fps */
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .trading-card,
+  .animate-price-up,
+  .animate-price-down,
+  .live-pulse,
+  .connection-connecting,
+  .data-stream,
+  .price-flash,
+  .live-mode-active,
+  .elegant-hover,
+  .performance-button {
+    animation: none;
+    transition: none;
+  }
+}
+

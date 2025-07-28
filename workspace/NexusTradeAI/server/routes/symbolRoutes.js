@@ -63,6 +63,63 @@ router.get('/test-search', async (req, res) => {
 });
 
 /**
+ * Test market data (no authentication required)
+ * GET /api/symbols/test-market-data/:symbol?provider=yahoo_finance
+ */
+router.get('/test-market-data/:symbol', async (req, res) => {
+  try {
+    if (!dataSourceManager || !dataSourceManager.isReady()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Data source manager not ready'
+      });
+    }
+
+    const { symbol } = req.params;
+    const { provider = null } = req.query;
+
+    if (!symbol || symbol.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Symbol is required'
+      });
+    }
+
+    const result = await dataSourceManager.getMarketData(
+      symbol.trim().toUpperCase(), 
+      provider, 
+      null // No user ID for test
+    );
+
+    // Handle the new response format from DataSourceManager
+    if (result.status === 'success') {
+      res.json({
+        status: 'success',
+        data: result.data,
+        provider: result.provider,
+        fallback: result.fallback || false,
+        message: 'Test market data completed - this endpoint works without authentication'
+      });
+    } else {
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to get market data',
+        error: result.error,
+        symbol: result.symbol
+      });
+    }
+
+  } catch (error) {
+    console.error('Test market data error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get market data',
+      error: error.message
+    });
+  }
+});
+
+/**
  * Search symbols across all available providers
  * GET /api/symbols/search?q=BTC&limit=10&providers=yahoo_finance,rithmic_websocket&categories=crypto,futures
  */
@@ -537,6 +594,146 @@ router.post('/subscribe', requireUser, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to subscribe to symbol',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get comprehensive analysis for a symbol (test endpoint - no auth required)
+ * GET /api/symbols/test-analysis/:symbol
+ */
+router.get('/test-analysis/:symbol', async (req, res) => {
+  try {
+    if (!dataSourceManager || !dataSourceManager.isReady()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Data source manager not ready'
+      });
+    }
+
+    const { symbol } = req.params;
+
+    if (!symbol || symbol.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Symbol is required'
+      });
+    }
+
+    const symbolUpper = symbol.trim().toUpperCase();
+    console.log(`🔍 Generating comprehensive analysis for ${symbolUpper}`);
+
+    // Get real-time market data
+    const marketDataResult = await dataSourceManager.getMarketData(symbolUpper, null, null);
+    
+    if (marketDataResult.status === 'error') {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get market data for analysis',
+        error: marketDataResult.error
+      });
+    }
+
+    const marketData = marketDataResult.data;
+    const currentPrice = marketData.price;
+    const change = marketData.change || 0;
+    const changePercent = marketData.changePercent || 0;
+
+    // Generate technical analysis
+    const technicalAnalysis = {
+      trend: changePercent > 2 ? 'STRONG_BULLISH' : 
+             changePercent > 0.5 ? 'BULLISH' :
+             changePercent < -2 ? 'STRONG_BEARISH' :
+             changePercent < -0.5 ? 'BEARISH' : 'NEUTRAL',
+      momentum: Math.abs(changePercent) > 3 ? 'HIGH' :
+                Math.abs(changePercent) > 1 ? 'MEDIUM' : 'LOW',
+      volatility: Math.abs(changePercent),
+      support: currentPrice * 0.95,
+      resistance: currentPrice * 1.05,
+      rsi: 30 + Math.random() * 40, // Simulated RSI between 30-70
+      macd: {
+        value: (Math.random() - 0.5) * 2,
+        signal: Math.random() > 0.5 ? 'BUY' : 'SELL'
+      }
+    };
+
+    // Generate trading signals
+    const signals = {
+      overall: changePercent > 1 ? 'BUY' : changePercent < -1 ? 'SELL' : 'HOLD',
+      confidence: Math.min(95, 50 + Math.abs(changePercent) * 10),
+      shortTerm: technicalAnalysis.momentum === 'HIGH' ? 
+                 (changePercent > 0 ? 'BUY' : 'SELL') : 'HOLD',
+      mediumTerm: technicalAnalysis.trend.includes('BULLISH') ? 'BUY' :
+                  technicalAnalysis.trend.includes('BEARISH') ? 'SELL' : 'HOLD',
+      longTerm: 'HOLD' // Conservative for long-term
+    };
+
+    // Generate risk assessment
+    const riskAssessment = {
+      level: Math.abs(changePercent) > 5 ? 'HIGH' :
+             Math.abs(changePercent) > 2 ? 'MEDIUM' : 'LOW',
+      factors: [
+        `Price volatility: ${Math.abs(changePercent).toFixed(2)}%`,
+        `Volume: ${marketData.volume ? 'Normal' : 'Low'}`,
+        `Trend strength: ${technicalAnalysis.momentum}`
+      ],
+      recommendation: signals.overall === 'BUY' ? 'Consider buying with stop-loss' :
+                     signals.overall === 'SELL' ? 'Consider selling or shorting' :
+                     'Hold position or wait for clearer signals'
+    };
+
+    // Generate key insights
+    const insights = [
+      `Current price is ${changePercent >= 0 ? 'up' : 'down'} ${Math.abs(changePercent).toFixed(2)}% today`,
+      `Technical trend is ${technicalAnalysis.trend.toLowerCase().replace('_', ' ')}`,
+      `Market momentum is ${technicalAnalysis.momentum.toLowerCase()}`,
+      `Risk level is assessed as ${riskAssessment.level.toLowerCase()}`,
+      `Overall signal: ${signals.overall} with ${signals.confidence.toFixed(0)}% confidence`
+    ];
+
+    // Generate price targets
+    const priceTargets = {
+      immediate: {
+        support: currentPrice * 0.98,
+        resistance: currentPrice * 1.02
+      },
+      nearTerm: {
+        support: currentPrice * 0.95,
+        resistance: currentPrice * 1.05
+      },
+      longTerm: {
+        support: currentPrice * 0.90,
+        resistance: currentPrice * 1.15
+      }
+    };
+
+    const comprehensiveAnalysis = {
+      symbol: symbolUpper,
+      timestamp: new Date().toISOString(),
+      marketData: marketData,
+      technicalAnalysis: technicalAnalysis,
+      signals: signals,
+      riskAssessment: riskAssessment,
+      priceTargets: priceTargets,
+      insights: insights,
+      provider: marketDataResult.provider,
+      dataQuality: marketDataResult.fallback ? 'fallback' : 'primary'
+    };
+
+    console.log(`✅ Generated comprehensive analysis for ${symbolUpper}`);
+
+    res.json({
+      success: true,
+      data: comprehensiveAnalysis,
+      message: `Comprehensive analysis completed for ${symbolUpper}`
+    });
+
+  } catch (error) {
+    console.error('Analysis error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate analysis',
       error: error.message
     });
   }

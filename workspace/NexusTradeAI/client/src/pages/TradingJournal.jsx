@@ -27,6 +27,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useAppStatus } from '../contexts/AppStatusContext';
+import apiService from '../services/apiService';
 
 const TradingJournal = () => {
   const [activeTab, setActiveTab] = useState('bot-trades');
@@ -70,36 +71,49 @@ const TradingJournal = () => {
     }
   };
 
-  // Mock function to simulate bot trade sync
+  // Real function to sync bot trades from API
   const syncBotTrades = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Fetch real bot trades from API
+      const response = await apiService.getRecentTrades(50); // Get more trades for journal
+      const apiTrades = response.data || response;
       
-      // Mock bot trade data
-      const mockBotTrade = {
-        id: Date.now(),
-        type: 'bot',
-        symbol: 'AAPL',
-        action: Math.random() > 0.5 ? 'BUY' : 'SELL',
-        entryPrice: (Math.random() * 200 + 100).toFixed(2),
-        exitPrice: (Math.random() * 200 + 100).toFixed(2),
-        contracts: Math.floor(Math.random() * 10) + 1,
-        takeProfit: (Math.random() * 20 + 10).toFixed(2),
-        stopLoss: (Math.random() * 10 + 5).toFixed(2),
-        openTime: new Date().toISOString(),
-        closeTime: new Date(Date.now() + Math.random() * 86400000).toISOString(),
-        pnl: (Math.random() * 1000 - 500).toFixed(2),
-        status: Math.random() > 0.3 ? 'closed' : 'open',
-        strategy: ['Momentum', 'Mean Reversion', 'Breakout'][Math.floor(Math.random() * 3)]
-      };
+      // Convert API trades to journal format
+      const realBotTrades = apiTrades
+        .filter(trade => trade.type === 'bot' || trade.source === 'bot') // Filter bot trades
+        .map(trade => ({
+          id: trade.id || Date.now(),
+          type: 'bot',
+          symbol: trade.symbol,
+          action: trade.action,
+          entryPrice: trade.entryPrice || trade.price,
+          exitPrice: trade.exitPrice || trade.price,
+          contracts: trade.quantity || trade.contracts || 1,
+          takeProfit: trade.takeProfit || '',
+          stopLoss: trade.stopLoss || '',
+          openTime: trade.openTime || trade.time || new Date().toISOString(),
+          closeTime: trade.closeTime || trade.time || new Date().toISOString(),
+          pnl: trade.pnl || '0',
+          status: trade.status || 'closed',
+          strategy: trade.strategy || 'AI Strategy'
+        }));
 
-      const updatedTrades = [mockBotTrade, ...botTrades];
-      setBotTrades(updatedTrades);
-      saveTrades('bot_trades', updatedTrades);
+      // Merge with existing trades, avoiding duplicates
+      const existingIds = new Set(botTrades.map(t => t.id));
+      const newTrades = realBotTrades.filter(trade => !existingIds.has(trade.id));
+      
+      if (newTrades.length > 0) {
+        const updatedTrades = [...newTrades, ...botTrades];
+        setBotTrades(updatedTrades);
+        saveTrades('bot_trades', updatedTrades);
+        showNotification(`Synced ${newTrades.length} new bot trades`, 'success');
+      } else {
+        showNotification('No new bot trades to sync', 'info');
+      }
     } catch (error) {
       console.error('Error syncing bot trades:', error);
+      showNotification('Failed to sync bot trades. Using local data.', 'error');
     } finally {
       setLoading(false);
     }
