@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../../.."
+		}
+	],
+	"settings": {
+		"Codegeex.GenerationPreference": "block",
+		"Codegeex.CommitMessage.LanguagePreference": "English",
+		"Codegeex.RepoIndex": true
+	}
+}
