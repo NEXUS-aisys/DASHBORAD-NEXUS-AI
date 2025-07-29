@@ -209,59 +209,13 @@ const Backtesting = () => {
     }
   };
 
-  // Improved historical data generator (fallback with realistic patterns)
+  // Historical data error handler - no mock data generation
   const generateMockHistoricalData = (symbol, startDate, endDate) => {
-    const data = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    console.error(`❌ Cannot generate mock historical data for ${symbol} - this would produce unreliable backtesting results`);
+    console.error(`📅 Date range: ${startDate} to ${endDate}`);
+    console.error(`⚠️ Backtesting requires real historical data for accurate strategy validation`);
     
-    // Use symbol-specific base prices for more realism
-    const basePrices = {
-      'BTC': 45000,
-      'ETH': 3000,
-      'AAPL': 150,
-      'TSLA': 200,
-      'GOOGL': 140,
-      'MSFT': 300,
-      'AMZN': 130,
-      'NFLX': 400,
-      'NQ': 15000,
-      'ES': 4500,
-      'YM': 35000,
-      'GC': 2000,
-      'CL': 80
-    };
-    
-    let currentPrice = basePrices[symbol] || 100;
-    
-    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-      if (date.getDay() !== 0 && date.getDay() !== 6) { // Skip weekends
-        // More realistic volatility based on asset type
-        const volatility = symbol.includes('BTC') || symbol.includes('ETH') ? 0.08 : 
-                          symbol.includes('NQ') || symbol.includes('ES') || symbol.includes('YM') ? 0.03 :
-                          symbol.includes('GC') || symbol.includes('CL') ? 0.04 : 0.02;
-        
-        const change = (Math.random() - 0.5) * volatility;
-        currentPrice *= (1 + change);
-        
-        // Ensure price doesn't go negative
-        currentPrice = Math.max(currentPrice, 0.01);
-        
-        const open = currentPrice * (1 + (Math.random() - 0.5) * 0.01);
-        const high = Math.max(open, currentPrice) * (1 + Math.random() * 0.02);
-        const low = Math.min(open, currentPrice) * (1 - Math.random() * 0.02);
-        
-        data.push({
-          date: new Date(date),
-          open: open,
-          high: high,
-          low: low,
-          close: currentPrice,
-          volume: Math.floor(Math.random() * 1000000) + 100000
-        });
-      }
-    }
-    return data;
+    throw new Error(`Unable to fetch historical data for ${symbol}. Backtesting cannot proceed with mock data as it would produce unreliable results. Please ensure real historical data is available for accurate strategy testing.`);
   };
 
   // Run backtest with real data
@@ -325,27 +279,10 @@ const Backtesting = () => {
 
     } catch (error) {
       console.error('Backtest error:', error);
-      // Fallback to mock results if real data fails
-      const mockResults = {
-        trades: [
-          {
-            id: 1,
-            symbol: 'AAPL',
-            action: 'BUY',
-            entryDate: '2024-01-15',
-            entryPrice: 150.25,
-            exitDate: '2024-01-25',
-            exitPrice: 165.50,
-            quantity: 10,
-            pnl: 152.50,
-            return: 0.1016
-          }
-        ],
-        equity: [{ date: '2024-01-01', value: initialCapital }],
-        drawdown: [{ date: '2024-01-01', value: 0 }]
-      };
-
-      setResults(mockResults);
+      // No fallback to mock results - backtesting requires real data
+      console.error('❌ Backtesting cannot proceed with mock data - this would produce unreliable results');
+      
+      setResults(null);
       setMetrics({
         totalReturn: 0,
         annualizedReturn: 0,
@@ -356,6 +293,9 @@ const Backtesting = () => {
         totalTrades: 0,
         avgTradeDuration: 0
       });
+      
+      // Show error to user
+      alert('Backtesting failed: Unable to fetch real historical data. Mock data cannot be used for reliable strategy testing.');
     }
 
     setIsRunning(false);

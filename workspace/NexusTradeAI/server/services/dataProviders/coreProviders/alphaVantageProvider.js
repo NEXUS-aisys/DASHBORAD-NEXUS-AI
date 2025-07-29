@@ -6,8 +6,8 @@ class AlphaVantageProvider {
     this.displayName = 'Alpha Vantage';
     this.type = 'core';
     this.baseUrl = 'https://www.alphavantage.co/query';
-    this.apiKey = process.env.ALPHA_VANTAGE_API_KEY || 'demo'; // Use demo key as fallback
-    this.rateLimitMs = 12000; // Alpha Vantage free tier: 5 requests per minute
+    this.apiKey = process.env.ALPHA_VANTAGE_API_KEY || 'D3FLU4LOAN3P8EC6'; // Use provided API key
+    this.rateLimitMs = 12000; // Alpha Vantage free tier: 5 requests per minute (12 seconds between requests)
     this.lastRequestTime = 0;
   }
 

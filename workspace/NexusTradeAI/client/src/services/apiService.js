@@ -128,33 +128,10 @@ class ApiService {
         console.error('Signals fallback also failed:', signalsError.message);
       }
       
-      // Final fallback: Generate realistic mock data with clear indication
-      console.log(`⚠️ All real data sources failed for ${symbol}, using emergency fallback`);
-      const basePrice = symbol.includes('BTC') ? 50000 + Math.random() * 10000 :
-                       symbol.includes('ETH') ? 3000 + Math.random() * 500 :
-                       symbol.includes('USDT') ? 1 + Math.random() * 0.1 :
-                       symbol.includes('SPY') ? 400 + Math.random() * 50 :
-                       symbol.includes('QQQ') ? 350 + Math.random() * 40 :
-                       symbol.includes('AAPL') ? 150 + Math.random() * 20 :
-                       100 + Math.random() * 200;
+      // Final step: Throw error instead of generating mock data
+      console.error(`❌ All real data sources failed for ${symbol} - no mock data will be generated`);
       
-      const change = (Math.random() - 0.5) * (basePrice * 0.05); // ±5% change
-      const changePercent = (change / basePrice) * 100;
-      
-      return {
-        status: 'success',
-        data: {
-          symbol: symbol,
-          price: basePrice,
-          change: change,
-          changePercent: changePercent,
-          volume: Math.floor(Math.random() * 500000) + 50000,
-          provider: 'emergency-fallback',
-          timestamp: new Date().toISOString(),
-          isEmergencyFallback: true
-        },
-        message: `⚠️ Using emergency fallback data for ${symbol} - all real data sources failed`
-      };
+      throw new Error(`Unable to fetch market data for ${symbol}. All data providers (Yahoo Finance, Polygon, and signals endpoint) are currently unavailable. Please try again later or check your internet connection.`);
     }
   }
 

@@ -251,9 +251,10 @@ if (false && cluster.isMaster) {
           const currentPrice = marketData.regularMarketPrice || 100;
           const previousClose = marketData.regularMarketPreviousClose || currentPrice * 0.99;
           
-          // Generate realistic position data
-          const quantity = Math.floor(Math.random() * 100) + 10;
-          const avgPrice = currentPrice * (0.95 + Math.random() * 0.1); // Random entry price
+          // Use fixed demo position data instead of random generation
+          // Note: In production, this would fetch from user's actual portfolio database
+          const quantity = 25; // Fixed demo quantity for test endpoint
+          const avgPrice = currentPrice * 0.98; // Fixed demo entry price (2% lower)
           const positionValue = currentPrice * quantity;
           const positionPnL = (currentPrice - avgPrice) * quantity;
           
@@ -304,27 +305,27 @@ if (false && cluster.isMaster) {
     try {
       const { limit = 10 } = req.query;
       
-      // Generate realistic recent trades based on real symbols
+      // Use real symbols for demonstration
       const tradeSymbols = ['BTC', 'ETH', 'AAPL', 'TSLA', 'GOOGL', 'MSFT', 'AMZN', 'NFLX'];
       const trades = [];
       
       for (let i = 0; i < Math.min(limit, 8); i++) {
         const symbol = tradeSymbols[i % tradeSymbols.length];
-        const action = Math.random() > 0.5 ? 'BUY' : 'SELL';
         
         try {
           const marketData = await yahooFinance.quote(symbol);
           const currentPrice = marketData.regularMarketPrice || 100;
           
-          // Generate realistic trade data
-          const quantity = Math.floor(Math.random() * 50) + 5;
-          const price = currentPrice * (0.98 + Math.random() * 0.04); // Slight variation from current price
+          // Use fixed demo values instead of random generation
+          const action = i % 2 === 0 ? 'BUY' : 'SELL'; // Alternating for demo
+          const quantity = 10 + (i * 5); // Fixed demo quantities
+          const price = currentPrice; // Use real current price
           const total = price * quantity;
           const fees = total * 0.001; // 0.1% fees
-          const pnl = action === 'BUY' ? 0 : (Math.random() - 0.5) * total * 0.1; // Random P&L for sells
+          const pnl = action === 'BUY' ? 0 : (total * 0.05); // Fixed demo P&L for sells
           
           trades.push({
-            id: `trade_${Date.now()}_${i}`,
+            id: `demo_trade_${Date.now()}_${i}`,
             symbol,
             action,
             quantity,
@@ -332,13 +333,15 @@ if (false && cluster.isMaster) {
             total: parseFloat(total.toFixed(2)),
             fees: parseFloat(fees.toFixed(2)),
             pnl: parseFloat(pnl.toFixed(2)),
-            status: Math.random() > 0.1 ? 'FILLED' : 'PENDING',
-            orderType: Math.random() > 0.5 ? 'MARKET' : 'LIMIT',
-            timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(), // Within last hour
-            provider: 'yahoo_finance'
+            status: 'FILLED', // Fixed demo status
+            orderType: 'MARKET', // Fixed demo order type
+            timestamp: new Date(Date.now() - (i * 3600000)).toISOString(), // Sequential demo timestamps
+            provider: 'yahoo_finance',
+            note: 'Demo trade with real market prices'
           });
         } catch (error) {
           console.error(`Error fetching data for ${symbol}:`, error.message);
+          // Skip this symbol instead of generating fake data
         }
       }
       
@@ -348,13 +351,13 @@ if (false && cluster.isMaster) {
       res.json({
         success: true,
         data: trades,
-        message: 'Test trades generated with real market data'
+        message: 'Demo trades with real market data (no random generation)'
       });
     } catch (error) {
-      console.error('Error generating test trades:', error);
+      console.error('Error generating demo trades:', error);
       res.status(500).json({
         success: false,
-        message: 'Error generating test trades',
+        message: 'Error generating demo trades',
         error: error.message
       });
     }
@@ -524,9 +527,10 @@ if (false && cluster.isMaster) {
           const currentPrice = marketData.regularMarketPrice || 100;
           const previousClose = marketData.regularMarketPreviousClose || currentPrice * 0.99;
           
-          // Generate realistic position data
-          const quantity = Math.floor(Math.random() * 100) + 10;
-          const avgPrice = currentPrice * (0.95 + Math.random() * 0.1); // Random entry price
+          // Use fixed demo position data instead of random generation
+          // Note: In production, this would fetch from user's actual portfolio database
+          const quantity = 50; // Fixed demo quantity
+          const avgPrice = currentPrice * 0.97; // Fixed demo entry price (3% lower)
           const positionValue = quantity * currentPrice;
           const positionPnL = quantity * (currentPrice - avgPrice);
           const positionPnLPercent = ((currentPrice - avgPrice) / avgPrice) * 100;
@@ -546,28 +550,9 @@ if (false && cluster.isMaster) {
             changePercent: ((currentPrice - previousClose) / previousClose * 100).toFixed(2)
           });
         } catch (error) {
-          console.log(`Failed to get market data for ${symbol}, using fallback`);
-          // Fallback data
-          const fallbackPrice = 100 + Math.random() * 1000;
-          const quantity = Math.floor(Math.random() * 100) + 10;
-          const avgPrice = fallbackPrice * (0.95 + Math.random() * 0.1);
-          const positionValue = quantity * fallbackPrice;
-          const positionPnL = quantity * (fallbackPrice - avgPrice);
-          
-          totalValue += positionValue;
-          totalPnL += positionPnL;
-          
-          positions.push({
-            symbol: symbol,
-            quantity: quantity,
-            avgPrice: avgPrice.toFixed(2),
-            currentPrice: fallbackPrice.toFixed(2),
-            value: positionValue.toFixed(2),
-            pnl: positionPnL.toFixed(2),
-            pnlPercent: ((fallbackPrice - avgPrice) / avgPrice * 100).toFixed(2),
-            change: (Math.random() - 0.5) * 10,
-            changePercent: (Math.random() - 0.5) * 5
-          });
+          console.error(`Failed to get market data for ${symbol}:`, error.message);
+          // Skip this symbol instead of generating fake data
+          console.log(`⚠️ Skipping ${symbol} in portfolio due to data unavailability`);
         }
       }
       
@@ -592,31 +577,31 @@ if (false && cluster.isMaster) {
     try {
       const { limit = 10 } = req.query;
       
-      // Generate realistic recent trades based on real symbols
+      // Use real symbols for demonstration
       const tradeSymbols = ['BTC', 'ETH', 'AAPL', 'TSLA', 'GOOGL', 'MSFT', 'AMZN', 'NFLX'];
       const trades = [];
       
       for (let i = 0; i < Math.min(limit, 8); i++) {
         const symbol = tradeSymbols[i % tradeSymbols.length];
-        const action = Math.random() > 0.5 ? 'BUY' : 'SELL';
         
         try {
           const marketData = await yahooFinance.quote(symbol);
           const currentPrice = marketData.regularMarketPrice || 100;
           
-          // Generate realistic trade data
-          const quantity = Math.floor(Math.random() * 50) + 5;
-          const price = currentPrice * (0.98 + Math.random() * 0.04); // Slight price variation
+          // Use fixed demo values instead of random generation
+          const action = i % 2 === 0 ? 'BUY' : 'SELL'; // Alternating for demo
+          const quantity = 10 + (i * 5); // Fixed demo quantities
+          const price = currentPrice; // Use real current price
           const total = quantity * price;
           const pnl = action === 'BUY' ? 
-            (Math.random() - 0.3) * total * 0.1 : // BUY trades usually have positive P&L
-            (Math.random() - 0.7) * total * 0.1;  // SELL trades can have negative P&L
+            (total * 0.02) : // Fixed demo P&L for buys
+            (total * 0.05);  // Fixed demo P&L for sells
           
-          // Generate realistic timestamp (within last 24 hours)
-          const timestamp = new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000);
+          // Generate sequential demo timestamps (within last 24 hours)
+          const timestamp = new Date(Date.now() - (i * 3600000)); // Sequential demo timestamps
           
           trades.push({
-            id: `trade_${Date.now()}_${i}`,
+            id: `demo_trade_${Date.now()}_${i}`,
             symbol: symbol,
             action: action,
             quantity: quantity,
@@ -625,35 +610,13 @@ if (false && cluster.isMaster) {
             pnl: pnl.toFixed(2),
             time: timestamp.toISOString(),
             status: 'FILLED',
-            orderType: Math.random() > 0.5 ? 'MARKET' : 'LIMIT',
-            fees: (total * 0.001).toFixed(2) // 0.1% fee
+            orderType: 'MARKET', // Fixed demo order type
+            fees: (total * 0.001).toFixed(2), // 0.1% fee
+            note: 'Demo trade with real market prices'
           });
         } catch (error) {
-          console.log(`Failed to get market data for ${symbol}, using fallback`);
-          // Fallback data
-          const fallbackPrice = 100 + Math.random() * 1000;
-          const quantity = Math.floor(Math.random() * 50) + 5;
-          const price = fallbackPrice * (0.98 + Math.random() * 0.04);
-          const total = quantity * price;
-          const pnl = action === 'BUY' ? 
-            (Math.random() - 0.3) * total * 0.1 :
-            (Math.random() - 0.7) * total * 0.1;
-          
-          const timestamp = new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000);
-          
-          trades.push({
-            id: `trade_${Date.now()}_${i}`,
-            symbol: symbol,
-            action: action,
-            quantity: quantity,
-            price: price.toFixed(2),
-            total: total.toFixed(2),
-            pnl: pnl.toFixed(2),
-            time: timestamp.toISOString(),
-            status: 'FILLED',
-            orderType: Math.random() > 0.5 ? 'MARKET' : 'LIMIT',
-            fees: (total * 0.001).toFixed(2)
-          });
+          console.error(`Error fetching market data for ${symbol}:`, error.message);
+          // Skip this symbol instead of generating fake data
         }
       }
       
@@ -662,7 +625,7 @@ if (false && cluster.isMaster) {
       
       res.json(trades);
     } catch (error) {
-      console.error('Error generating recent trades:', error);
+      console.error('Error generating demo trades:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1171,28 +1134,41 @@ if (false && cluster.isMaster) {
     try {
       const { symbol } = req.params;
       
-      // Generate mock indicator signals based on real market data
+      // Calculate real indicator signals based on actual market data
       const marketData = await yahooFinance.quote(symbol);
-      const currentPrice = marketData.regularMarketPrice || 100;
       
+      if (!marketData || !marketData.regularMarketPrice) {
+        throw new Error(`Unable to fetch market data for ${symbol} - cannot calculate technical indicators`);
+      }
+      
+      const currentPrice = marketData.regularMarketPrice;
+      const previousClose = marketData.regularMarketPreviousClose || currentPrice;
+      const dayHigh = marketData.regularMarketDayHigh || currentPrice;
+      const dayLow = marketData.regularMarketDayLow || currentPrice;
+      const volume = marketData.regularMarketVolume || 0;
+      
+      // Calculate basic real technical indicators
       const indicators = [
         {
-          name: 'RSI',
-          value: 45 + Math.random() * 20,
-          signal: Math.random() > 0.5 ? 'BULLISH' : 'BEARISH',
-          strength: Math.random() * 100
+          name: 'Price Momentum',
+          value: ((currentPrice - previousClose) / previousClose * 100).toFixed(2),
+          signal: currentPrice > previousClose ? 'BULLISH' : 'BEARISH',
+          strength: Math.min(Math.abs((currentPrice - previousClose) / previousClose * 100) * 10, 100),
+          description: `Based on current price vs previous close: ${currentPrice.toFixed(2)} vs ${previousClose.toFixed(2)}`
         },
         {
-          name: 'MACD',
-          value: Math.random() * 2 - 1,
-          signal: Math.random() > 0.5 ? 'BULLISH' : 'BEARISH', 
-          strength: Math.random() * 100
+          name: 'Daily Range Position',
+          value: dayHigh > dayLow ? (((currentPrice - dayLow) / (dayHigh - dayLow)) * 100).toFixed(2) : 50,
+          signal: dayHigh > dayLow && currentPrice > (dayLow + dayHigh) / 2 ? 'BULLISH' : 'BEARISH',
+          strength: dayHigh > dayLow ? Math.abs(currentPrice - (dayLow + dayHigh) / 2) / ((dayHigh - dayLow) / 2) * 50 : 25,
+          description: `Position within daily range: High ${dayHigh.toFixed(2)}, Low ${dayLow.toFixed(2)}`
         },
         {
-          name: 'Bollinger Bands',
-          value: currentPrice,
-          signal: Math.random() > 0.5 ? 'BULLISH' : 'BEARISH',
-          strength: Math.random() * 100
+          name: 'Volume Indicator',
+          value: volume,
+          signal: volume > 1000000 ? 'HIGH_VOLUME' : 'NORMAL_VOLUME',
+          strength: Math.min(volume / 10000, 100),
+          description: `Trading volume: ${volume.toLocaleString()} shares`
         }
       ];
       

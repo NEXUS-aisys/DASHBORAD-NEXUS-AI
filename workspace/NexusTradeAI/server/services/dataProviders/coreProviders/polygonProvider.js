@@ -141,104 +141,73 @@ class PolygonProvider {
       try {
         console.log(`📈 [${this.displayName}] Fetching market data for: ${symbol}`);
       
-      // Check cache first
-      const cachedData = this.marketDataCache.get(symbol);
-      if (cachedData && Date.now() - this.lastCacheUpdate < this.cacheExpiry) {
-        console.log(`✅ [${this.displayName}] Returning cached market data for: ${symbol}`);
-        return cachedData;
-      }
-
-      // Get previous day's close (this works with basic subscription)
-      const prevCloseResponse = await axios.get(`${this.baseUrl}/v2/aggs/ticker/${symbol}/prev`, {
-        params: {
-          apiKey: this.apiKey
-        },
-        timeout: 10000,
-        headers: {
-          'User-Agent': 'NexusTradeAI/1.0'
-        }
-      });
-
-      if (prevCloseResponse.data && prevCloseResponse.data.results && prevCloseResponse.data.results.length > 0) {
-        const prevData = prevCloseResponse.data.results[0];
-        const prevClose = prevData.c;
-        
-        // Generate realistic current price based on previous close
-        const marketHours = new Date().getHours();
-        const isMarketOpen = marketHours >= 9 && marketHours < 16; // Simplified market hours
-        
-        let currentPrice, change, changePercent;
-        
-        if (isMarketOpen) {
-          // During market hours, simulate realistic price movement
-          const priceVariation = (Math.random() - 0.5) * 0.02; // ±1% variation
-          currentPrice = prevClose * (1 + priceVariation);
-          change = currentPrice - prevClose;
-          changePercent = (change / prevClose) * 100;
-        } else {
-          // Outside market hours, use previous close
-          currentPrice = prevClose;
-          change = 0;
-          changePercent = 0;
+        // Check cache first (but skip cache for futures symbols that Polygon doesn't have)
+        const cachedData = this.marketDataCache.get(symbol);
+        if (cachedData && Date.now() - this.lastCacheUpdate < this.cacheExpiry && !symbol.includes('=F')) {
+          console.log(`✅ [${this.displayName}] Returning cached market data for: ${symbol}`);
+          return cachedData;
         }
 
-        const marketData = {
-          symbol: symbol,
-          price: currentPrice,
-          change: change,
-          changePercent: changePercent,
-          volume: prevData.v || Math.floor(Math.random() * 1000000),
-          high: prevData.h || currentPrice,
-          low: prevData.l || currentPrice,
-          open: prevData.o || currentPrice,
-          previousClose: prevClose,
-          timestamp: Date.now(),
-          provider: this.name,
-          currency: 'USD',
-          exchange: 'NASDAQ',
-          realData: true,
-          fallback: false
-        };
+        // Get previous day's close (this works with basic subscription)
+        const prevCloseResponse = await axios.get(`${this.baseUrl}/v2/aggs/ticker/${symbol}/prev`, {
+          params: {
+            apiKey: this.apiKey
+          },
+          timeout: 10000,
+          headers: {
+            'User-Agent': 'NexusTradeAI/1.0'
+          }
+        });
 
-        // Cache the data
-        this.marketDataCache.set(symbol, marketData);
-        this.lastCacheUpdate = Date.now();
+        if (prevCloseResponse.data && prevCloseResponse.data.results && prevCloseResponse.data.results.length > 0) {
+          const prevData = prevCloseResponse.data.results[0];
+          const prevClose = prevData.c;
+          
+          // Use previous close as current price (no simulation, no fallback)
+          const currentPrice = prevClose;
+          const change = 0;
+          const changePercent = 0;
+          const volume = prevData.v || 0;
+          const high = prevData.h || currentPrice;
+          const low = prevData.l || currentPrice;
+          const open = prevData.o || currentPrice;
+          const priceSource = 'polygon_previous_close';
 
-        console.log(`✅ [${this.displayName}] Successfully fetched market data for ${symbol}: $${currentPrice.toFixed(2)} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%) - Based on real previous close: $${prevClose.toFixed(2)}`);
-        return marketData;
+          const marketData = {
+            symbol: symbol,
+            price: currentPrice,
+            change: change,
+            changePercent: changePercent,
+            volume: volume,
+            high: high,
+            low: low,
+            open: open,
+            previousClose: prevClose,
+            timestamp: Date.now(),
+            provider: this.name,
+            currency: 'USD',
+            exchange: 'NASDAQ',
+            realData: true,
+            fallback: false,
+            priceSource: priceSource
+          };
+
+          // Cache the data
+          this.marketDataCache.set(symbol, marketData);
+          this.lastCacheUpdate = Date.now();
+
+          console.log(`✅ [${this.displayName}] Successfully fetched market data for ${symbol}: $${currentPrice.toFixed(2)} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%) - Based on real previous close: $${prevClose.toFixed(2)}`);
+          return marketData;
+        }
+
+        throw new Error('No previous close data available');
+
+      } catch (error) {
+        console.error(`❌ [${this.displayName}] Error fetching market data for ${symbol}:`, error.message);
+        
+        // If Polygon fails, throw error - NO FAKE DATA, NO FALLBACK
+        throw new Error(`No real market data available for ${symbol}. Polygon.io failed: ${error.message}`);
       }
-
-      throw new Error('No previous close data available');
-
-    } catch (error) {
-      console.error(`❌ [${this.displayName}] Error fetching market data for ${symbol}:`, error.message);
-      
-      // Return mock data as fallback
-      const mockPrice = 100 + Math.random() * 900;
-      const mockChange = (Math.random() - 0.5) * 20;
-      const mockChangePercent = (mockChange / mockPrice) * 100;
-
-      const fallbackData = {
-        symbol: symbol,
-        price: mockPrice,
-        change: mockChange,
-        changePercent: mockChangePercent,
-        volume: Math.floor(Math.random() * 1000000),
-        high: mockPrice * 1.02,
-        low: mockPrice * 0.98,
-        open: mockPrice * (1 + (Math.random() - 0.5) * 0.01),
-        previousClose: mockPrice - mockChange,
-        timestamp: Date.now(),
-        provider: this.name,
-        currency: 'USD',
-        exchange: 'NASDAQ',
-        realData: false,
-        fallback: true
-      };
-
-      console.log(`⚠️ [${this.displayName}] Using fallback data for ${symbol}`);
-      return fallbackData;
-    }
     });
   }
 

@@ -1,4 +1,5 @@
 const axios = require('axios');
+const yahooFinance = require('yahoo-finance2').default;
 
 class YahooFinanceProvider {
   constructor() {
@@ -6,8 +7,24 @@ class YahooFinanceProvider {
     this.displayName = 'Yahoo Finance';
     this.type = 'core'; // Core provider - always available
     this.baseUrl = 'https://query1.finance.yahoo.com/v1/finance';
-    this.rateLimitMs = 2000; // 1 request per 2 seconds - more conservative
+    this.rateLimitMs = 3000; // 1 request per 3 seconds - more conservative
     this.lastRequestTime = 0;
+  }
+
+  /**
+   * Enforce rate limiting
+   * @private
+   */
+  async enforceRateLimit() {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.rateLimitMs) {
+      const delay = this.rateLimitMs - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    this.lastRequestTime = Date.now();
   }
 
   /**
@@ -20,25 +37,10 @@ class YahooFinanceProvider {
     try {
       await this.enforceRateLimit();
       
-      const searchUrl = `${this.baseUrl}/search`;
-      const response = await axios.get(searchUrl, {
-        params: {
-          q: query,
-          quotesCount: limit,
-          newsCount: 0,
-          enableFuzzyQuery: false,
-          quotesQueryId: 'tss_match_phrase_query',
-          multiQuoteQueryId: 'multi_quote_single_token_query'
-        },
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        timeout: 10000
-      });
-
-      const quotes = response.data?.quotes || [];
+      // Use yahoo-finance2 package for search
+      const results = await yahooFinance.search(query, { quotesCount: limit });
       
-      return quotes.map(quote => ({
+      return results.quotes.map(quote => ({
         symbol: quote.symbol,
         name: quote.longname || quote.shortname || quote.symbol,
         type: this.determineAssetType(quote),
@@ -70,23 +72,16 @@ class YahooFinanceProvider {
     try {
       await this.enforceRateLimit();
       
-      // Use the correct Yahoo Finance API endpoint
-      const quoteUrl = 'https://query1.finance.yahoo.com/v7/finance/quote';
-      const response = await axios.get(quoteUrl, {
-        params: {
-          symbols: symbol,
-          fields: 'regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketTime,regularMarketVolume,regularMarketDayHigh,regularMarketDayLow,regularMarketOpen,regularMarketPreviousClose'
-        },
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        timeout: 10000
-      });
-
-      const quote = response.data?.quoteResponse?.result?.[0];
+      // Use yahoo-finance2 package for market data
+      const quote = await yahooFinance.quote(symbol);
       
       if (!quote) {
         throw new Error(`No data found for symbol: ${symbol}`);
+      }
+
+      // Check if we got valid price data
+      if (!quote.regularMarketPrice && quote.regularMarketPrice !== 0) {
+        throw new Error(`Invalid price data for symbol: ${symbol}`);
       }
 
       return {
@@ -94,14 +89,16 @@ class YahooFinanceProvider {
         provider: this.name,
         timestamp: new Date().toISOString(),
         price: quote.regularMarketPrice,
-        change: quote.regularMarketChange,
-        changePercent: quote.regularMarketChangePercent,
-        volume: quote.regularMarketVolume,
-        dayHigh: quote.regularMarketDayHigh,
-        dayLow: quote.regularMarketDayLow,
-        open: quote.regularMarketOpen?.raw || quote.regularMarketOpen,
-        previousClose: quote.regularMarketPreviousClose?.raw || quote.regularMarketPreviousClose,
-        marketTime: quote.regularMarketTime?.raw ? new Date(quote.regularMarketTime.raw * 1000).toISOString() : new Date().toISOString()
+        change: quote.regularMarketChange || 0,
+        changePercent: quote.regularMarketChangePercent || 0,
+        volume: quote.regularMarketVolume || 0,
+        dayHigh: quote.regularMarketDayHigh || quote.regularMarketPrice,
+        dayLow: quote.regularMarketDayLow || quote.regularMarketPrice,
+        open: quote.regularMarketOpen || quote.regularMarketPrice,
+        previousClose: quote.regularMarketPreviousClose || quote.regularMarketPrice,
+        marketTime: quote.regularMarketTime ? new Date(quote.regularMarketTime * 1000).toISOString() : new Date().toISOString(),
+        realData: true,
+        fallback: false
       };
     } catch (error) {
       console.error(`Yahoo Finance market data error for "${symbol}":`, error.message);
@@ -183,22 +180,6 @@ class YahooFinanceProvider {
   }
 
   /**
-   * Enforce rate limiting
-   * @private
-   */
-  async enforceRateLimit() {
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-    
-    if (timeSinceLastRequest < this.rateLimitMs) {
-      const delay = this.rateLimitMs - timeSinceLastRequest;
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-    
-    this.lastRequestTime = Date.now();
-  }
-
-  /**
    * Test provider connection
    * @returns {Promise<Object>} Test result
    */
@@ -223,18 +204,22 @@ class YahooFinanceProvider {
 
   /**
    * Get provider capabilities
-   * @returns {Object} Provider capabilities
+   * @returns {Object} Capabilities object
    */
   getCapabilities() {
     return {
-      symbolSearch: true,
-      realTimeData: true,
-      historicalData: false, // Can be added later
-      tradingExecution: false,
-      categories: ['stocks', 'crypto', 'indices', 'futures', 'forex', 'options'],
-      rateLimitMs: this.rateLimitMs,
-      isCore: true,
-      requiresAuth: false
+      name: this.name,
+      displayName: this.displayName,
+      type: this.type,
+      supports: {
+        realTimeData: true,
+        historicalData: true,
+        symbolSearch: true,
+        popularSymbols: true,
+        assetTypes: ['stocks', 'crypto', 'futures', 'indices', 'forex', 'commodities']
+      },
+      rateLimit: `${this.rateLimitMs}ms between requests`,
+      dataQuality: 'high'
     };
   }
 }

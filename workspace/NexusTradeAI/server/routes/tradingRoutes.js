@@ -50,9 +50,10 @@ router.get('/portfolio', requireUser, async (req, res) => {
         const currentPrice = marketData.regularMarketPrice || 100;
         const previousClose = marketData.regularMarketPreviousClose || currentPrice * 0.99;
         
-        // Generate realistic position data
-        const shares = Math.floor(Math.random() * 100) + 10;
-        const avgPrice = currentPrice * (0.95 + Math.random() * 0.1); // Random entry price
+        // Use fixed demo position data instead of random generation
+        // Note: In production, this would fetch from user's actual portfolio database
+        const shares = 30; // Fixed demo share count
+        const avgPrice = currentPrice * 0.96; // Fixed demo entry price (4% lower)
         const value = shares * currentPrice;
         const gain = shares * (currentPrice - avgPrice);
         
@@ -67,24 +68,9 @@ router.get('/portfolio', requireUser, async (req, res) => {
           gain: gain.toFixed(2)
         });
       } catch (error) {
-        console.log(`Failed to get market data for ${symbol}, using fallback`);
-        // Fallback data
-        const fallbackPrice = 100 + Math.random() * 1000;
-        const shares = Math.floor(Math.random() * 100) + 10;
-        const avgPrice = fallbackPrice * (0.95 + Math.random() * 0.1);
-        const value = shares * fallbackPrice;
-        const gain = shares * (fallbackPrice - avgPrice);
-        
-        totalValue += value;
-        totalGain += gain;
-        
-        positions.push({
-          symbol: symbol,
-          shares: shares,
-          currentPrice: fallbackPrice.toFixed(2),
-          value: value.toFixed(2),
-          gain: gain.toFixed(2)
-        });
+        console.error(`Failed to get market data for ${symbol}:`, error.message);
+        // Skip this symbol instead of generating fake data
+        console.log(`⚠️ Skipping ${symbol} in portfolio due to data unavailability`);
       }
     }
     
@@ -119,7 +105,7 @@ router.get('/history', requireUser, async (req, res) => {
     
     for (let i = 0; i < Math.min(limit, 20); i++) {
       const tradeSymbol = symbol || tradeSymbols[i % tradeSymbols.length];
-      const tradeType = type || (Math.random() > 0.5 ? 'BUY' : 'SELL');
+      const tradeType = type || (i % 2 === 0 ? 'BUY' : 'SELL'); // Fixed demo pattern
       
       try {
         let marketData;
@@ -131,12 +117,12 @@ router.get('/history', requireUser, async (req, res) => {
         }
         
         const currentPrice = marketData.regularMarketPrice || 100;
-        const tradePrice = currentPrice * (0.98 + Math.random() * 0.04); // Slight price variation
-        const shares = Math.floor(Math.random() * 50) + 5;
+        const tradePrice = currentPrice; // Use real current price
+        const shares = 10 + (i * 5); // Fixed demo quantities
         const total = shares * tradePrice;
         
-        // Generate realistic trade date (within last 30 days)
-        const tradeDate = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000);
+        // Generate sequential demo trade dates (within last 30 days)
+        const tradeDate = new Date(Date.now() - (i * 24 * 60 * 60 * 1000)); // Sequential demo dates
         
         history.push({
           id: (i + 1).toString(),
@@ -146,26 +132,12 @@ router.get('/history', requireUser, async (req, res) => {
           price: tradePrice.toFixed(2),
           date: tradeDate.toISOString(),
           total: total.toFixed(2),
-          status: 'EXECUTED'
+          status: 'EXECUTED',
+          note: 'Demo trade with real market prices'
         });
       } catch (error) {
-        console.log(`Failed to get market data for ${tradeSymbol}, using fallback`);
-        // Fallback data
-        const fallbackPrice = 100 + Math.random() * 1000;
-        const shares = Math.floor(Math.random() * 50) + 5;
-        const total = shares * fallbackPrice;
-        const tradeDate = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000);
-        
-        history.push({
-          id: (i + 1).toString(),
-          symbol: tradeSymbol,
-          type: tradeType,
-          shares: shares,
-          price: fallbackPrice.toFixed(2),
-          date: tradeDate.toISOString(),
-          total: total.toFixed(2),
-          status: 'EXECUTED'
-        });
+        console.error(`Error fetching market data for ${tradeSymbol}:`, error.message);
+        // Skip this trade instead of generating fake data
       }
     }
     
@@ -362,35 +334,31 @@ router.post('/ai-recommendations', requireUser, async (req, res) => {
   }
 });
 
-// Get trading analytics with real data
+// Get trading analytics with demo data
 router.get('/analytics', requireUser, async (req, res) => {
   try {
     const { period = '30d' } = req.query;
     
-    // Generate realistic analytics based on trading patterns
+    // Use fixed demo analytics instead of random generation
     const symbols = ['BTC', 'ETH', 'AAPL', 'TSLA', 'GOOGL', 'MSFT', 'AMZN', 'NFLX'];
-    const totalTrades = Math.floor(Math.random() * 50) + 20; // 20-70 trades
-    const winRate = 0.5 + Math.random() * 0.4; // 50-90% win rate
+    const totalTrades = 35; // Fixed demo value
+    const winRate = 0.65; // Fixed demo win rate
     
-    // Calculate realistic returns based on market conditions
-    const baseReturn = (Math.random() - 0.3) * 0.3; // -9% to +21% base return
-    const volatility = 0.1 + Math.random() * 0.2; // 10-30% volatility
-    const totalReturn = baseReturn + (Math.random() - 0.5) * volatility;
+    // Use fixed demo returns instead of random calculations
+    const baseReturn = 0.08; // Fixed 8% base return
+    const volatility = 0.15; // Fixed 15% volatility
+    const totalReturn = 0.12; // Fixed 12% total return
     
-    // Calculate Sharpe ratio
+    // Calculate Sharpe ratio with fixed values
     const riskFreeRate = 0.02; // 2% risk-free rate
     const sharpeRatio = volatility > 0 ? (totalReturn - riskFreeRate) / volatility : 0;
     
-    // Calculate max drawdown
-    const maxDrawdown = Math.random() * 0.15; // 0-15% max drawdown
+    // Use fixed demo values
+    const maxDrawdown = 0.08; // Fixed 8% max drawdown
+    const avgHoldTime = 12; // Fixed 12 days
+    const profitFactor = 1.8; // Fixed profit factor
     
-    // Calculate average hold time
-    const avgHoldTime = Math.floor(Math.random() * 20) + 5; // 5-25 days
-    
-    // Calculate profit factor
-    const profitFactor = 1.0 + Math.random() * 1.5; // 1.0-2.5 profit factor
-    
-    const realAnalytics = {
+    const demoAnalytics = {
       period,
       totalTrades,
       winRate: winRate.toFixed(3),
@@ -399,12 +367,13 @@ router.get('/analytics', requireUser, async (req, res) => {
       maxDrawdown: maxDrawdown.toFixed(3),
       avgHoldTime: `${avgHoldTime} days`,
       profitFactor: profitFactor.toFixed(2),
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      note: 'Demo analytics with fixed values (no random generation)'
     };
     
     res.json({
       success: true,
-      data: realAnalytics
+      data: demoAnalytics
     });
   } catch (error) {
     console.error('Error fetching analytics:', error);
@@ -449,20 +418,8 @@ router.get('/watchlist', requireUser, async (req, res) => {
           volume: marketData.regularMarketVolume || 0
         });
       } catch (error) {
-        console.log(`Failed to get market data for ${symbol}, using fallback`);
-        // Fallback data
-        const fallbackPrice = 100 + Math.random() * 1000;
-        const priceChange = (Math.random() - 0.5) * 10;
-        const priceChangePercent = (priceChange / fallbackPrice) * 100;
-        
-        watchlist.push({
-          symbol: symbol,
-          addedDate: addedDate.toISOString(),
-          currentPrice: fallbackPrice.toFixed(2),
-          priceChange: priceChange.toFixed(2),
-          priceChangePercent: priceChangePercent.toFixed(2),
-          volume: Math.floor(Math.random() * 1000000) + 100000
-        });
+        console.error(`Error fetching market data for ${symbol}:`, error.message);
+        // Skip this symbol instead of generating fake data
       }
     }
     
@@ -888,9 +845,9 @@ router.get('/test/signals/:symbol', async (req, res) => {
       timestamp: new Date().toISOString(),
       error: null,
       summary: {
-        signal: Math.random() > 0.5 ? 'BUY' : 'SELL',
-        confidence: Math.floor(Math.random() * 40) + 60, // 60-100
-        sentiment: Math.random() > 0.5 ? 'bullish' : 'bearish',
+        signal: 'BUY', // Fixed demo signal
+        confidence: 75, // Fixed demo confidence
+        sentiment: 'bullish', // Fixed demo sentiment
         entryPrice: { min: 4850, max: 4860 },
         targetPrice: 4920,
         stopLoss: 4810,

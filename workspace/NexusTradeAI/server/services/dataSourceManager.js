@@ -45,10 +45,10 @@ class DataSourceManager extends EventEmitter {
    * @private
    */
   async initializeCoreProviders() {
-    // Yahoo Finance Provider (Real-time data - FREE)
-    const yahooFinanceProvider = new YahooFinanceProvider();
-    this.coreProviders.set('yahoo_finance', yahooFinanceProvider);
-    console.log('📈 Yahoo Finance provider registered (Primary - Real data)');
+    // Alpha Vantage Provider (Real-time data - PRIMARY)
+    const alphaVantageProvider = new AlphaVantageProvider();
+    this.coreProviders.set('alpha_vantage', alphaVantageProvider);
+    console.log('📈 Alpha Vantage provider registered (Primary - Real data)');
 
     // Polygon.io Provider (Your API key - Backup)
     const polygonProvider = new PolygonProvider();
@@ -293,31 +293,31 @@ class DataSourceManager extends EventEmitter {
       } catch (providerError) {
         console.error(`Primary provider ${targetProvider.name} failed for ${symbol}:`, providerError.message);
         
-        // Smart fallback system for stock symbols
-        const symbolUpper = symbol.toUpperCase();
+        // Try ALL available providers before giving up
+        const triedProviders = [targetProvider.name];
         
-        // For crypto, try Bybit as fallback
-        if (symbolUpper.includes('USDT') || symbolUpper.includes('BTC') || symbolUpper.includes('ETH')) {
-          const bybitProvider = availableProviders.find(p => p.name === 'bybit');
-          if (bybitProvider && bybitProvider !== targetProvider) {
-            try {
-              console.log(`🔄 Trying Bybit fallback for ${symbol}`);
-              const fallbackData = await bybitProvider.getMarketData(symbol);
-              return {
-                status: 'success',
-                data: fallbackData,
-                provider: 'bybit',
-                fallback: true
-              };
-            } catch (fallbackError) {
-              console.error(`Bybit fallback also failed for ${symbol}:`, fallbackError.message);
-            }
+        for (const fallbackProvider of availableProviders) {
+          if (fallbackProvider === targetProvider) continue; // Skip the one we already tried
+          
+          try {
+            console.log(`🔄 Trying ${fallbackProvider.name} fallback for ${symbol}`);
+            const fallbackData = await fallbackProvider.getMarketData(symbol);
+            return {
+              status: 'success',
+              data: fallbackData,
+              provider: fallbackProvider.name,
+              fallback: true,
+              triedProviders: triedProviders
+            };
+          } catch (fallbackError) {
+            console.error(`${fallbackProvider.name} fallback also failed for ${symbol}:`, fallbackError.message);
+            triedProviders.push(fallbackProvider.name);
           }
         }
 
-        // No fallback - only real data or error
+        // All providers failed - throw error with details
         console.log(`❌ All real data providers failed for ${symbol}`);
-        throw new Error(`No real market data available for ${symbol}. All providers are rate limited.`);
+        throw new Error(`No real market data available for ${symbol}. Providers tried: ${triedProviders.join(', ')}`);
       }
     } catch (error) {
       console.error(`Market data error for ${symbol}:`, error);
@@ -380,17 +380,25 @@ class DataSourceManager extends EventEmitter {
       }
     }
 
-    // Check for futures patterns
-    if (symbolUpper.match(/^(ES|NQ|YM|RTY|GC|CL|ZB|ZN)/)) {
+    // Check for futures patterns (NQ=F, ES=F, etc.)
+    if (symbolUpper.match(/^(ES|NQ|YM|RTY|GC|CL|ZB|ZN)/) || symbolUpper.includes('=F')) {
+      // For futures, try Yahoo Finance first (Polygon doesn't have futures)
+      const yahooProvider = availableProviders.find(p => p.name === 'alpha_vantage'); // Changed from yahoo_finance to alpha_vantage
+      if (yahooProvider) {
+        console.log(`✅ Selected Alpha Vantage provider for futures symbol ${symbol}`);
+        return yahooProvider;
+      }
+      
+      // Fallback to Rithmic if available
       const rithmicProvider = availableProviders.find(p => p.name === 'rithmic_websocket');
       if (rithmicProvider) return rithmicProvider;
     }
 
-    // Stock providers - Polygon for real data (since Yahoo Finance is often rate limited)
-    const stockProviders = [
-      'polygon',          // Primary - Your API key (more reliable)
-      'yahoo_finance'     // Backup - Free but often rate limited
-    ];
+          // Stock providers - Alpha Vantage first for better coverage, then Polygon
+      const stockProviders = [
+        'alpha_vantage',    // Primary - Better coverage (stocks, ETFs, funds)
+        'polygon'           // Backup - Your API key (stocks only)
+      ];
 
     for (const providerName of stockProviders) {
       const provider = availableProviders.find(p => p.name === providerName);
