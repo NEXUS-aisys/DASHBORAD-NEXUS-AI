@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { sendLLMRequest } = require('./llmService');
-const yahooFinanceProvider = require('./dataProviders/coreProviders/yahooFinanceProvider');
+
 
 /**
  * Generate AI trading signals based on real-time data
@@ -9,8 +9,8 @@ const yahooFinanceProvider = require('./dataProviders/coreProviders/yahooFinance
  */
 async function generateAISignal(symbol) {
   try {
-    // Fetch market data from Yahoo Finance
-    const marketData = await yahooFinanceProvider.getMarketData(symbol);
+      // Demo data since Yahoo Finance is removed
+  const marketData = {
 
     // Create a message for the LLM
     const message = `Analyze the following market data for ${symbol}: Price ${marketData.price}, Volume ${marketData.volume}, Day High ${marketData.dayHigh}, Day Low ${marketData.dayLow}. Provide a signal with direction, confidence level, and supporting analysis.`;

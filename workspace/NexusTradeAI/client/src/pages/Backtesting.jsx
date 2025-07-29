@@ -159,7 +159,7 @@ const Backtesting = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch real historical data from Yahoo Finance API
+      // Fetch real historical data from Alpha Vantage API
   const fetchHistoricalData = async (symbol, startDate, endDate) => {
     try {
       console.log(`Fetching historical data for ${symbol} from ${startDate} to ${endDate}`);

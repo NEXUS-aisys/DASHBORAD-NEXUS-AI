@@ -10,7 +10,7 @@ const verifyAuth = require('./utils/verifyAuth');
 // const SupabaseService = require('./services/supabaseService');
 const StripeService = require('./services/stripeService');
 const { initWebSocket, broadcast } = require('./services/websocket');
-const yahooFinance = require('yahoo-finance2').default;
+
 const telegramRoutes = require('./routes/telegramRoutes');
 
 // Import DataSourceManager and Symbol Routes
@@ -144,85 +144,38 @@ if (false && cluster.isMaster) {
       const signals = [];
       
       for (const symbol of popularSymbols.slice(0, 6)) {
-        // Get real market data for each symbol
-        try {
-          const marketData = await yahooFinance.quote(symbol);
-          const currentPrice = marketData.regularMarketPrice || 100;
-          const previousClose = marketData.regularMarketPreviousClose || currentPrice * 0.99;
-          const priceChange = currentPrice - previousClose;
-          const priceChangePercent = (priceChange / previousClose) * 100;
-          
-          // Generate realistic signal based on price movement
-          let signal = 'HOLD';
-          let confidence = 50;
-          let reason = 'Market analysis indicates neutral position';
-          
-          if (priceChangePercent > 2) {
-            signal = 'BUY';
-            confidence = Math.min(85, 60 + Math.abs(priceChangePercent) * 2);
-            reason = `Strong upward momentum detected with ${priceChangePercent.toFixed(2)}% price increase`;
-          } else if (priceChangePercent < -2) {
-            signal = 'SELL';
-            confidence = Math.min(85, 60 + Math.abs(priceChangePercent) * 2);
-            reason = `Downward pressure identified with ${priceChangePercent.toFixed(2)}% price decline`;
-          } else if (priceChangePercent > 0.5) {
-            signal = 'BUY';
-            confidence = 65;
-            reason = `Moderate bullish signal with ${priceChangePercent.toFixed(2)}% positive movement`;
-          } else if (priceChangePercent < -0.5) {
-            signal = 'SELL';
-            confidence = 65;
-            reason = `Moderate bearish signal with ${priceChangePercent.toFixed(2)}% negative movement`;
-          }
-          
-          signals.push({
-            symbol: symbol,
-            signal: signal,
-            confidence: confidence,
-            price: currentPrice.toFixed(2),
-            priceChange: priceChange.toFixed(2),
-            priceChangePercent: priceChangePercent.toFixed(2),
-            reason: reason,
-            timestamp: new Date().toISOString(),
-            provider: 'yahoo_finance',
-            volume: marketData.regularMarketVolume || 0,
-            marketCap: marketData.marketCap || 0
-          });
-        } catch (error) {
-          console.log(`Failed to get market data for ${symbol}, using fallback`);
-          // Fallback data if market data fails
-          const fallbackPrice = 100 + Math.random() * 1000;
-          const fallbackChange = (Math.random() - 0.5) * 10;
-          const fallbackChangePercent = (fallbackChange / fallbackPrice) * 100;
-          
-          let signal = 'HOLD';
-          let confidence = 50;
-          let reason = 'Technical analysis indicates neutral position';
-          
-          if (fallbackChangePercent > 1) {
-            signal = 'BUY';
-            confidence = 70;
-            reason = `Positive momentum detected in ${symbol}`;
-          } else if (fallbackChangePercent < -1) {
-            signal = 'SELL';
-            confidence = 70;
-            reason = `Negative pressure identified in ${symbol}`;
-          }
-          
-          signals.push({
-            symbol: symbol,
-            signal: signal,
-            confidence: confidence,
-            price: fallbackPrice.toFixed(2),
-            priceChange: fallbackChange.toFixed(2),
-            priceChangePercent: fallbackChangePercent.toFixed(2),
-            reason: reason,
-            timestamp: new Date().toISOString(),
-            provider: 'yahoo_finance',
-            volume: 0,
-            marketCap: 0
-          });
+        // Generate demo signals (no real data fetching)
+        const fallbackPrice = 100 + Math.random() * 1000;
+        const fallbackChange = (Math.random() - 0.5) * 10;
+        const fallbackChangePercent = (fallbackChange / fallbackPrice) * 100;
+        
+        let signal = 'HOLD';
+        let confidence = 50;
+        let reason = 'Technical analysis indicates neutral position';
+        
+        if (fallbackChangePercent > 1) {
+          signal = 'BUY';
+          confidence = 70;
+          reason = `Positive momentum detected in ${symbol}`;
+        } else if (fallbackChangePercent < -1) {
+          signal = 'SELL';
+          confidence = 70;
+          reason = `Negative pressure identified in ${symbol}`;
         }
+        
+        signals.push({
+          symbol: symbol,
+          signal: signal,
+          confidence: confidence,
+          price: fallbackPrice.toFixed(2),
+          priceChange: fallbackChange.toFixed(2),
+          priceChangePercent: fallbackChangePercent.toFixed(2),
+          reason: reason,
+          timestamp: new Date().toISOString(),
+          provider: 'demo',
+          volume: 0,
+          marketCap: 0
+        });
       }
       
       res.json({
@@ -246,34 +199,30 @@ if (false && cluster.isMaster) {
       let positions = [];
       
       for (const symbol of portfolioSymbols) {
-        try {
-          const marketData = await yahooFinance.quote(symbol);
-          const currentPrice = marketData.regularMarketPrice || 100;
-          const previousClose = marketData.regularMarketPreviousClose || currentPrice * 0.99;
-          
-          // Use fixed demo position data instead of random generation
-          // Note: In production, this would fetch from user's actual portfolio database
-          const quantity = 25; // Fixed demo quantity for test endpoint
-          const avgPrice = currentPrice * 0.98; // Fixed demo entry price (2% lower)
-          const positionValue = currentPrice * quantity;
-          const positionPnL = (currentPrice - avgPrice) * quantity;
-          
-          totalValue += positionValue;
-          totalPnL += positionPnL;
-          
-          positions.push({
-            symbol,
-            quantity,
-            avgPrice: parseFloat(avgPrice.toFixed(2)),
-            currentPrice: parseFloat(currentPrice.toFixed(2)),
-            value: parseFloat(positionValue.toFixed(2)),
-            pnl: parseFloat(positionPnL.toFixed(2)),
-            pnlPercent: parseFloat(((positionPnL / (avgPrice * quantity)) * 100).toFixed(2)),
-            provider: 'yahoo_finance'
-          });
-        } catch (error) {
-          console.error(`Error fetching data for ${symbol}:`, error.message);
-        }
+        // Demo data since Yahoo Finance is removed
+        const currentPrice = 100 + Math.random() * 1000;
+        const previousClose = currentPrice * 0.99;
+        
+        // Use fixed demo position data instead of random generation
+        // Note: In production, this would fetch from user's actual portfolio database
+        const quantity = 25; // Fixed demo quantity for test endpoint
+        const avgPrice = currentPrice * 0.98; // Fixed demo entry price (2% lower)
+        const positionValue = currentPrice * quantity;
+        const positionPnL = (currentPrice - avgPrice) * quantity;
+        
+        totalValue += positionValue;
+        totalPnL += positionPnL;
+        
+        positions.push({
+          symbol,
+          quantity,
+          avgPrice: parseFloat(avgPrice.toFixed(2)),
+          currentPrice: parseFloat(currentPrice.toFixed(2)),
+          value: parseFloat(positionValue.toFixed(2)),
+          pnl: parseFloat(positionPnL.toFixed(2)),
+          pnlPercent: parseFloat(((positionPnL / (avgPrice * quantity)) * 100).toFixed(2)),
+          provider: 'demo'
+        });
       }
       
       const portfolioData = {
@@ -312,37 +261,32 @@ if (false && cluster.isMaster) {
       for (let i = 0; i < Math.min(limit, 8); i++) {
         const symbol = tradeSymbols[i % tradeSymbols.length];
         
-        try {
-          const marketData = await yahooFinance.quote(symbol);
-          const currentPrice = marketData.regularMarketPrice || 100;
-          
-          // Use fixed demo values instead of random generation
-          const action = i % 2 === 0 ? 'BUY' : 'SELL'; // Alternating for demo
-          const quantity = 10 + (i * 5); // Fixed demo quantities
-          const price = currentPrice; // Use real current price
-          const total = price * quantity;
-          const fees = total * 0.001; // 0.1% fees
-          const pnl = action === 'BUY' ? 0 : (total * 0.05); // Fixed demo P&L for sells
-          
-          trades.push({
-            id: `demo_trade_${Date.now()}_${i}`,
-            symbol,
-            action,
-            quantity,
-            price: parseFloat(price.toFixed(2)),
-            total: parseFloat(total.toFixed(2)),
-            fees: parseFloat(fees.toFixed(2)),
-            pnl: parseFloat(pnl.toFixed(2)),
-            status: 'FILLED', // Fixed demo status
-            orderType: 'MARKET', // Fixed demo order type
-            timestamp: new Date(Date.now() - (i * 3600000)).toISOString(), // Sequential demo timestamps
-            provider: 'yahoo_finance',
-            note: 'Demo trade with real market prices'
-          });
-        } catch (error) {
-          console.error(`Error fetching data for ${symbol}:`, error.message);
-          // Skip this symbol instead of generating fake data
-        }
+        // Demo data since Yahoo Finance is removed
+        const currentPrice = 100 + Math.random() * 1000;
+        
+        // Use fixed demo values instead of random generation
+        const action = i % 2 === 0 ? 'BUY' : 'SELL'; // Alternating for demo
+        const quantity = 10 + (i * 5); // Fixed demo quantities
+        const price = currentPrice; // Use demo current price
+        const total = price * quantity;
+        const fees = total * 0.001; // 0.1% fees
+        const pnl = action === 'BUY' ? 0 : (total * 0.05); // Fixed demo P&L for sells
+        
+        trades.push({
+          id: `demo_trade_${Date.now()}_${i}`,
+          symbol,
+          action,
+          quantity,
+          price: parseFloat(price.toFixed(2)),
+          total: parseFloat(total.toFixed(2)),
+          fees: parseFloat(fees.toFixed(2)),
+          pnl: parseFloat(pnl.toFixed(2)),
+          status: 'FILLED', // Fixed demo status
+          orderType: 'MARKET', // Fixed demo order type
+          timestamp: new Date(Date.now() - (i * 3600000)).toISOString(), // Sequential demo timestamps
+          provider: 'demo',
+          note: 'Demo trade with demo market prices'
+        });
       }
       
       // Sort by timestamp (newest first)
@@ -420,8 +364,9 @@ if (false && cluster.isMaster) {
             marketData = await fetchBybitData(symbol);
             provider = 'bybit';
           } else {
-            marketData = await yahooFinance.quote(symbol);
-            provider = 'yahoo_finance';
+            // Demo data since Yahoo Finance is removed
+            marketData = { regularMarketPrice: 100 + Math.random() * 1000 };
+            provider = 'demo';
           }
           
           const currentPrice = marketData.regularMarketPrice || 100;
@@ -477,35 +422,36 @@ if (false && cluster.isMaster) {
     }
   });
 
-  // Fetch Yahoo Finance data
+  // Demo market data endpoint (Yahoo Finance removed)
   app.get('/api/market/:symbol', verifyAuth, async (req, res) => {
     const { symbol } = req.params;
     try {
-      const end = new Date();
-      const start = new Date(end - 7 * 24 * 60 * 60 * 1000);
-      const quote = await yahooFinance.historical(symbol, { period1: start, period2: end });
-      res.json(quote);
+      // Demo data since Yahoo Finance is removed
+      const demoData = {
+        symbol: symbol,
+        price: 100 + Math.random() * 1000,
+        timestamp: new Date().toISOString()
+      };
+      res.json(demoData);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Historical data endpoint for backtesting
+  // Demo historical data endpoint for backtesting (Yahoo Finance removed)
   app.get('/api/market/historical/:symbol', verifyAuth, async (req, res) => {
     const { symbol } = req.params;
     const { start, end } = req.query;
     
     try {
-      const startDate = new Date(start);
-      const endDate = new Date(end);
+      // Demo data since Yahoo Finance is removed
+      const demoHistoricalData = {
+        symbol: symbol,
+        data: [],
+        message: 'Demo historical data - Yahoo Finance removed'
+      };
       
-      const historicalData = await yahooFinance.historical(symbol, {
-        period1: startDate,
-        period2: endDate,
-        interval: '1d'
-      });
-      
-      res.json(historicalData);
+      res.json(demoHistoricalData);
     } catch (error) {
       console.error('Error fetching historical data:', error);
       res.status(500).json({ error: 'Failed to fetch historical data' });
@@ -522,38 +468,32 @@ if (false && cluster.isMaster) {
       let positions = [];
       
       for (const symbol of portfolioSymbols) {
-        try {
-          const marketData = await yahooFinance.quote(symbol);
-          const currentPrice = marketData.regularMarketPrice || 100;
-          const previousClose = marketData.regularMarketPreviousClose || currentPrice * 0.99;
-          
-          // Use fixed demo position data instead of random generation
-          // Note: In production, this would fetch from user's actual portfolio database
-          const quantity = 50; // Fixed demo quantity
-          const avgPrice = currentPrice * 0.97; // Fixed demo entry price (3% lower)
-          const positionValue = quantity * currentPrice;
-          const positionPnL = quantity * (currentPrice - avgPrice);
-          const positionPnLPercent = ((currentPrice - avgPrice) / avgPrice) * 100;
-          
-          totalValue += positionValue;
-          totalPnL += positionPnL;
-          
-          positions.push({
-            symbol: symbol,
-            quantity: quantity,
-            avgPrice: avgPrice.toFixed(2),
-            currentPrice: currentPrice.toFixed(2),
-            value: positionValue.toFixed(2),
-            pnl: positionPnL.toFixed(2),
-            pnlPercent: positionPnLPercent.toFixed(2),
-            change: (currentPrice - previousClose).toFixed(2),
-            changePercent: ((currentPrice - previousClose) / previousClose * 100).toFixed(2)
-          });
-        } catch (error) {
-          console.error(`Failed to get market data for ${symbol}:`, error.message);
-          // Skip this symbol instead of generating fake data
-          console.log(`⚠️ Skipping ${symbol} in portfolio due to data unavailability`);
-        }
+        // Demo data since Yahoo Finance is removed
+        const currentPrice = 100 + Math.random() * 1000;
+        const previousClose = currentPrice * 0.99;
+        
+        // Use fixed demo position data instead of random generation
+        // Note: In production, this would fetch from user's actual portfolio database
+        const quantity = 50; // Fixed demo quantity
+        const avgPrice = currentPrice * 0.97; // Fixed demo entry price (3% lower)
+        const positionValue = quantity * currentPrice;
+        const positionPnL = quantity * (currentPrice - avgPrice);
+        const positionPnLPercent = ((currentPrice - avgPrice) / avgPrice) * 100;
+        
+        totalValue += positionValue;
+        totalPnL += positionPnL;
+        
+        positions.push({
+          symbol: symbol,
+          quantity: quantity,
+          avgPrice: avgPrice.toFixed(2),
+          currentPrice: currentPrice.toFixed(2),
+          value: positionValue.toFixed(2),
+          pnl: positionPnL.toFixed(2),
+          pnlPercent: positionPnLPercent.toFixed(2),
+          change: (currentPrice - previousClose).toFixed(2),
+          changePercent: ((currentPrice - previousClose) / previousClose * 100).toFixed(2)
+        });
       }
       
       const portfolio = {
@@ -584,40 +524,35 @@ if (false && cluster.isMaster) {
       for (let i = 0; i < Math.min(limit, 8); i++) {
         const symbol = tradeSymbols[i % tradeSymbols.length];
         
-        try {
-          const marketData = await yahooFinance.quote(symbol);
-          const currentPrice = marketData.regularMarketPrice || 100;
-          
-          // Use fixed demo values instead of random generation
-          const action = i % 2 === 0 ? 'BUY' : 'SELL'; // Alternating for demo
-          const quantity = 10 + (i * 5); // Fixed demo quantities
-          const price = currentPrice; // Use real current price
-          const total = quantity * price;
-          const pnl = action === 'BUY' ? 
-            (total * 0.02) : // Fixed demo P&L for buys
-            (total * 0.05);  // Fixed demo P&L for sells
-          
-          // Generate sequential demo timestamps (within last 24 hours)
-          const timestamp = new Date(Date.now() - (i * 3600000)); // Sequential demo timestamps
-          
-          trades.push({
-            id: `demo_trade_${Date.now()}_${i}`,
-            symbol: symbol,
-            action: action,
-            quantity: quantity,
-            price: price.toFixed(2),
-            total: total.toFixed(2),
-            pnl: pnl.toFixed(2),
-            time: timestamp.toISOString(),
-            status: 'FILLED',
-            orderType: 'MARKET', // Fixed demo order type
-            fees: (total * 0.001).toFixed(2), // 0.1% fee
-            note: 'Demo trade with real market prices'
-          });
-        } catch (error) {
-          console.error(`Error fetching market data for ${symbol}:`, error.message);
-          // Skip this symbol instead of generating fake data
-        }
+        // Demo data since Yahoo Finance is removed
+        const currentPrice = 100 + Math.random() * 1000;
+        
+        // Use fixed demo values instead of random generation
+        const action = i % 2 === 0 ? 'BUY' : 'SELL'; // Alternating for demo
+        const quantity = 10 + (i * 5); // Fixed demo quantities
+        const price = currentPrice; // Use demo current price
+        const total = quantity * price;
+        const pnl = action === 'BUY' ? 
+          (total * 0.02) : // Fixed demo P&L for buys
+          (total * 0.05);  // Fixed demo P&L for sells
+        
+        // Generate sequential demo timestamps (within last 24 hours)
+        const timestamp = new Date(Date.now() - (i * 3600000)); // Sequential demo timestamps
+        
+        trades.push({
+          id: `demo_trade_${Date.now()}_${i}`,
+          symbol: symbol,
+          action: action,
+          quantity: quantity,
+          price: price.toFixed(2),
+          total: total.toFixed(2),
+          pnl: pnl.toFixed(2),
+          time: timestamp.toISOString(),
+          status: 'FILLED',
+          orderType: 'MARKET', // Fixed demo order type
+          fees: (total * 0.001).toFixed(2), // 0.1% fee
+          note: 'Demo trade with demo market prices'
+        });
       }
       
       // Sort by timestamp (most recent first)

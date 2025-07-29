@@ -32,7 +32,7 @@ module.exports = {
   HEALTH_CHECK_INTERVAL: process.env.HEALTH_CHECK_INTERVAL || 30000,
   
   // API Rate Limits
-  YAHOO_FINANCE_RATE_LIMIT: process.env.YAHOO_FINANCE_RATE_LIMIT || 100, // requests per minute
+
   BYBIT_RATE_LIMIT: process.env.BYBIT_RATE_LIMIT || 120, // requests per minute
   
   // Performance Monitoring

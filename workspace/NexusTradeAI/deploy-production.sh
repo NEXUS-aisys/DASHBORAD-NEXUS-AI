@@ -107,7 +107,7 @@ JWT_SECRET=your_jwt_secret_key
 REDIS_URL=redis://localhost:6379
 
 # API Rate Limits
-YAHOO_FINANCE_RATE_LIMIT=100
+
 BYBIT_RATE_LIMIT=120
 EOF
 

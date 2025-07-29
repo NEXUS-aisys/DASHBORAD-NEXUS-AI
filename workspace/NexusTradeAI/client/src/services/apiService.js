@@ -62,7 +62,7 @@ class ApiService {
     try {
       console.log(`🔍 Fetching REAL market data for ${symbol}...`);
       
-      // Try to get real data from test endpoint (uses Yahoo Finance, Polygon, etc.)
+      // Try to get real data from test endpoint (uses Alpha Vantage, Polygon, etc.)
       const response = await this.request(`/symbols/test-market-data/${symbol}`);
       
       // Check if we got real data (not mock)
@@ -78,16 +78,16 @@ class ApiService {
     } catch (error) {
       console.warn(`❌ Real market data failed for ${symbol}:`, error.message);
       
-      // Fallback 1: Try with specific Yahoo Finance provider
+      // Fallback 1: Try with specific Alpha Vantage provider
       try {
-        console.log(`🔄 Trying Yahoo Finance for ${symbol}...`);
-        const yahooResponse = await this.request(`/symbols/test-market-data/${symbol}?provider=yahoo_finance`);
-        if (yahooResponse.status === 'success') {
-          console.log(`✅ Got Yahoo Finance data for ${symbol}`);
-          return yahooResponse;
+        console.log(`🔄 Trying Alpha Vantage for ${symbol}...`);
+        const alphaResponse = await this.request(`/symbols/test-market-data/${symbol}?provider=alpha_vantage`);
+        if (alphaResponse.status === 'success') {
+          console.log(`✅ Got Alpha Vantage data for ${symbol}`);
+          return alphaResponse;
         }
-      } catch (yahooError) {
-        console.warn(`Yahoo Finance also failed for ${symbol}:`, yahooError.message);
+      } catch (alphaError) {
+        console.warn(`Alpha Vantage also failed for ${symbol}:`, alphaError.message);
       }
       
       // Fallback 2: Try with Polygon provider
@@ -131,7 +131,7 @@ class ApiService {
       // Final step: Throw error instead of generating mock data
       console.error(`❌ All real data sources failed for ${symbol} - no mock data will be generated`);
       
-      throw new Error(`Unable to fetch market data for ${symbol}. All data providers (Yahoo Finance, Polygon, and signals endpoint) are currently unavailable. Please try again later or check your internet connection.`);
+      throw new Error(`Unable to fetch market data for ${symbol}. All data providers (Alpha Vantage, Polygon, and signals endpoint) are currently unavailable. Please try again later or check your internet connection.`);
     }
   }
 

@@ -148,7 +148,7 @@ const SymbolCard = React.memo(({
             <div className={`w-2 h-2 rounded-full ${
               data.data.isEmergencyFallback ? 'bg-[var(--error)]' :
               data.data.metadata?.isMockRealTime ? 'bg-[var(--warning)]' :
-              data.provider === 'yahoo_finance' ? 'bg-[var(--success)]' :
+              data.provider === 'alpha_vantage' ? 'bg-[var(--success)]' :
               data.provider === 'polygon' ? 'bg-[var(--info)]' :
               data.provider === 'bybit' ? 'bg-[var(--accent-primary)]' :
               'bg-[var(--text-muted)]'
@@ -156,7 +156,7 @@ const SymbolCard = React.memo(({
             <span className="text-xs text-[var(--text-muted)]">
               {data.data.isEmergencyFallback ? 'Fallback' :
                data.data.metadata?.isMockRealTime ? 'Simulated' :
-               data.provider === 'yahoo_finance' ? 'Yahoo' :
+               data.provider === 'alpha_vantage' ? 'Alpha' :
                data.provider === 'polygon' ? 'Polygon' :
                data.provider === 'bybit' ? 'Bybit' :
                data.provider || 'Unknown'}

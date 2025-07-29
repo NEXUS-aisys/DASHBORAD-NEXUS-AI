@@ -100,8 +100,8 @@ const SymbolSelector = ({ selectedSymbol, onSymbolChange, placeholder = "Search 
           symbol: query.toUpperCase(),
           name: `Search for ${query.toUpperCase()}`,
           type: 'unknown',
-          provider: 'yahoo_finance',
-          providerName: 'Yahoo Finance',
+                  provider: 'alpha_vantage',
+        providerName: 'Alpha Vantage',
           isUserBroker: false
         }]);
       }
@@ -112,8 +112,8 @@ const SymbolSelector = ({ selectedSymbol, onSymbolChange, placeholder = "Search 
         symbol: query.toUpperCase(),
         name: `Search for ${query.toUpperCase()}`,
         type: 'unknown',
-        provider: 'yahoo_finance',
-        providerName: 'Yahoo Finance',
+        provider: 'alpha_vantage',
+        providerName: 'Alpha Vantage',
         isUserBroker: false
       }]);
     } finally {

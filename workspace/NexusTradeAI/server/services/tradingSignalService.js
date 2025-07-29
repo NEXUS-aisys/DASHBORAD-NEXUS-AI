@@ -1,4 +1,4 @@
-const yahooFinance = require('yahoo-finance2').default;
+
 const { sendLLMRequest } = require('./llmService');
 
 class TradingSignalService {
@@ -114,7 +114,8 @@ class TradingSignalService {
    */
   async fetchHistoricalData(symbol, period = '3mo') {
     try {
-      const result = await yahooFinance.historical(symbol, {
+      // Demo data since Yahoo Finance is removed
+    const result = {
         period1: this.getPeriodStart(period),
         period2: new Date(),
         interval: '1d'
@@ -157,8 +158,8 @@ class TradingSignalService {
    */
   async getCurrentMarketData(symbol) {
     try {
-      // Try Yahoo Finance first
-      const quote = await yahooFinance.quote(symbol);
+          // Demo data since Yahoo Finance is removed
+    const quote = {
       return {
         currentPrice: quote.regularMarketPrice || quote.price || 0,
         change: quote.regularMarketChange || 0,

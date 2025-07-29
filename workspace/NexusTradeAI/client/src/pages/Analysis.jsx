@@ -179,7 +179,7 @@ const Analysis = () => {
             : 'bg-[var(--warning)]/10 text-[var(--warning)]'
         }`}>
           {analysisData.provider === 'polygon' ? 'Polygon API' : 
-           analysisData.provider === 'yahoo_finance' ? 'Yahoo Finance' :
+           analysisData.provider === 'alpha_vantage' ? 'Alpha Vantage' :
            analysisData.provider === 'bybit' ? 'Bybit API' : 'Real Data'}
         </div>
       </div>

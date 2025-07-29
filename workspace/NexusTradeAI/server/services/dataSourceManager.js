@@ -3,7 +3,7 @@ const FinnhubProvider = require('./dataProviders/coreProviders/finnhubProvider')
 const MockRealTimeProvider = require('./dataProviders/coreProviders/mockRealTimeProvider');
 const BybitProvider = require('./dataProviders/coreProviders/bybitProvider');
 const PolygonProvider = require('./dataProviders/coreProviders/polygonProvider');
-const YahooFinanceProvider = require('./dataProviders/coreProviders/yahooFinanceProvider');
+
 const RithmicWebSocketProvider = require('./dataProviders/coreProviders/rithmicWebSocketProvider');
 const EventEmitter = require('events');
 
@@ -382,11 +382,11 @@ class DataSourceManager extends EventEmitter {
 
     // Check for futures patterns (NQ=F, ES=F, etc.)
     if (symbolUpper.match(/^(ES|NQ|YM|RTY|GC|CL|ZB|ZN)/) || symbolUpper.includes('=F')) {
-      // For futures, try Yahoo Finance first (Polygon doesn't have futures)
-      const yahooProvider = availableProviders.find(p => p.name === 'alpha_vantage'); // Changed from yahoo_finance to alpha_vantage
-      if (yahooProvider) {
+      // For futures, try Alpha Vantage first (Polygon doesn't have futures)
+      const alphaProvider = availableProviders.find(p => p.name === 'alpha_vantage');
+      if (alphaProvider) {
         console.log(`✅ Selected Alpha Vantage provider for futures symbol ${symbol}`);
-        return yahooProvider;
+        return alphaProvider;
       }
       
       // Fallback to Rithmic if available
