@@ -1,0 +1,9 @@
+# Kubernetes Namespace for NexusTradeAI
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexustrade
+  labels:
+    app: nexustrade-ai
+    environment: production
+    tier: platform

@@ -1,0 +1,60 @@
+# ConfigMap for NexusTradeAI Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexustrade-config
+  namespace: nexustrade
+  labels:
+    app: nexustrade-ai
+    component: configuration
+data:
+  # Server Configuration
+  NODE_ENV: "production"
+  PORT: "3001"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_TTL: "30"
+  
+  # Data Provider Configuration
+  CACHE_TTL_SECONDS: "30"
+  CIRCUIT_BREAKER_TIMEOUT: "5000"
+  CIRCUIT_BREAKER_THRESHOLD: "5"
+  CIRCUIT_BREAKER_RESET_TIMEOUT: "30000"
+  
+  # WebSocket Configuration
+  SOCKET_IO_CORS_ORIGIN: "*"
+  SOCKET_IO_ADAPTER: "redis"
+  
+  # Clustering Configuration
+  CLUSTER_WORKERS: "auto"
+  CLUSTER_ENABLED: "true"
+  
+  # Performance Configuration
+  UV_THREADPOOL_SIZE: "16"
+  NODE_OPTIONS: "--max-old-space-size=2048"
+  
+  # Logging Configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  
+  # Health Check Configuration
+  HEALTH_CHECK_INTERVAL: "30000"
+  GRACEFUL_SHUTDOWN_TIMEOUT: "10000"
+  
+  # Rate Limiting Configuration
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_MAX_REQUESTS: "1000"
+  
+  # Data Provider URLs
+  BYBIT_BASE_URL: "https://api.bybit.com/v5/market/tickers"
+  POLYGON_BASE_URL: "https://api.polygon.io/v2/aggs/ticker"
+  ALPHA_VANTAGE_BASE_URL: "https://www.alphavantage.co/query"
+  
+  # Application Configuration
+  MAX_CONCURRENT_REQUESTS: "100"
+  REQUEST_TIMEOUT: "10000"
+  RETRY_ATTEMPTS: "3"
+  RETRY_DELAY: "1000"
